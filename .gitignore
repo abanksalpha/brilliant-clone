@@ -1,0 +1,12 @@
+node_modules
+frontend/node_modules
+dist
+frontend/dist
+.env
+.env.local
+.env.*.local
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
+coverage
+frontend/coverage

@@ -1,0 +1,135 @@
+@import url('https://fonts.googleapis.com/css2?family=Kalam:wght@700&family=Patrick+Hand&display=swap');
+
+/* ---------------------------------------------------------------------------
+ * Design tokens — neutral, demoable-inspired UI system.
+ * Variable names remain stable for the existing styles.css contract while
+ * values shift toward clean cards, subtle borders, restrained shadows, and
+ * modern type.
+ * ------------------------------------------------------------------------- */
+
+:root {
+  /* Surfaces */
+  --paper: hsl(0 0% 97.5%);
+  --paper-sunken: hsl(0 0% 94.8%);
+  --surface: hsl(0 0% 100%);
+  --surface-raised: hsl(0 0% 100%);
+
+  /* Text */
+  --ink: hsl(0 0% 9%);
+  --ink-soft: hsl(0 0% 23%);
+  --ink-faint: hsl(0 0% 45%);
+  --ink-on-accent: hsl(0 0% 98%);
+
+  /* Borders */
+  --line: hsl(0 0% 89.8%);
+  --line-strong: hsl(0 0% 82%);
+
+  /* Primary neutral action */
+  --accent: hsl(0 0% 9%);
+  --accent-strong: hsl(0 0% 12%);
+  --accent-lip: hsl(0 0% 16%);
+  --accent-tint: hsl(0 0% 96.1%);
+
+  /* Positive */
+  --success: oklch(63% 0.16 145);
+  --success-lip: oklch(54% 0.13 145);
+  --success-tint: oklch(96% 0.038 145);
+  --success-ink: oklch(42% 0.11 145);
+
+  /* Error */
+  --error: hsl(0 84.2% 60.2%);
+  --error-lip: hsl(0 72% 46%);
+  --error-tint: hsl(0 100% 97.5%);
+  --error-ink: hsl(0 72% 38%);
+
+  /* Reward accents */
+  --energy: oklch(77% 0.13 84);
+  --energy-strong: oklch(69% 0.12 82);
+  --energy-ink: oklch(47% 0.1 74);
+
+  /* Streak accent */
+  --streak: oklch(70% 0.14 52);
+  --streak-ink: oklch(49% 0.12 52);
+
+  /* Locked/secondary */
+  --power: hsl(0 0% 86%);
+  --power-strong: hsl(0 0% 76%);
+  --power-lip: hsl(0 0% 68%);
+  --power-tint: hsl(0 0% 96.1%);
+  --power-ink: hsl(0 0% 35%);
+
+  /* Radius */
+  --r-sm: 0.375rem;
+  --r-md: 0.5rem;
+  --r-lg: 0.75rem;
+  --r-xl: 1rem;
+  --r-pill: 999px;
+
+  /* Spacing — 4pt grid */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-7: 32px;
+  --s-8: 40px;
+  --s-9: 56px;
+  --s-10: 72px;
+
+  /* Typography */
+  --font-display: "Inter", "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-text: "Inter", "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+
+  /* Borders and elevation */
+  --outline-w: 1px;
+  --shadow-hard-sm: 0 1px 2px hsl(0 0% 9% / 0.08);
+  --shadow-card: 0 1px 2px hsl(0 0% 9% / 0.08), 0 8px 20px hsl(0 0% 9% / 0.04);
+  --shadow-pop: 0 2px 6px hsl(0 0% 9% / 0.08), 0 18px 40px hsl(0 0% 9% / 0.08);
+
+  /* Motion */
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-back: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-step: linear;
+  --dur-fast: 120ms;
+  --dur: 180ms;
+  --dur-slow: 320ms;
+  --dur-enter: 460ms;
+
+  --lip: 1px;
+  --pixel: 1px;
+
+  /* App chrome */
+  --topbar-h: 64px;
+  --content-max: 1080px;
+
+  /* Hand-drawn theme (scoped to dashboard shell) */
+  --sketch-paper: #fdfbf7;
+  --sketch-ink: #2d2d2d;
+  --sketch-muted: #e5e0d8;
+  --sketch-accent: #ff4d4d;
+  /* Hover/pressed shade of the accent: same red, just darker. */
+  --sketch-accent-strong: color-mix(in oklab, var(--sketch-accent) 80%, var(--sketch-ink));
+  --sketch-secondary: #2d5da1;
+  --sketch-note: #fff9c4;
+
+  --sketch-texture-dot: color-mix(in oklab, var(--sketch-muted) 78%, transparent);
+  --sketch-shadow: 4px 4px 0 0 var(--sketch-ink);
+  --sketch-shadow-strong: 8px 8px 0 0 var(--sketch-ink);
+  --sketch-shadow-soft: 3px 3px 0 0 rgb(45 45 45 / 0.12);
+
+  --sketch-wobbly: 255px 15px 225px 15px / 15px 225px 15px 255px;
+  --sketch-wobbly-md: 22px 38px 18px 34px / 30px 18px 32px 20px;
+  --sketch-wobbly-sm: 12px 20px 14px 24px / 20px 12px 24px 14px;
+
+  --font-hand-title: 'Kalam', 'Comic Sans MS', 'Marker Felt', cursive;
+  --font-hand-body: 'Patrick Hand', 'Comic Sans MS', 'Segoe Print', cursive;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --ease-step: linear;
+  }
+}

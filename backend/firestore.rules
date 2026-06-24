@@ -1,0 +1,183 @@
+rules_version = '2';
+
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: users
+// Document ID: {userId} == Firebase Auth uid (ownership is by path; the uid is
+//              NOT stored as a field, so it cannot be tampered with).
+// Fields (all managed by the client ProgressProvider; the doc is rewritten in
+// full on every mutation):
+//   - completedLessonIds:  list<string>          (required) lessons finished, in order
+//   - completionDates:     map<string,string>    (required) lessonId -> 'YYYY-MM-DD'
+//   - lastOpenedLessonId:  string | null         (required) last lesson opened
+//   - answeredQuestionIds: list<string>          (required) "lessonId:step" ids
+//   - questionXp:          number (>= 0)         (required) XP from questions
+//   - dailyXp:             map<string,number>    (required) 'YYYY-MM-DD' -> xp
+//   - lessonSessions:      map<string,map>       (required) lessonId -> { stepIndex, maxVisitedStepIndex }
+//
+// A user may only ever read or write their OWN users document. No user can read
+// or write another user's users document.
+//
+// ---------------------------------------------------------------
+// Collection: profiles
+// Document ID: {userId} == Firebase Auth uid (ownership by path).
+// Purpose: the searchable, friend-visible identity + course position. A user
+//          may only WRITE their own profile, but ANY signed-in user may READ
+//          profiles (required for name search and for showing friends' position
+//          on the timeline). NOTE: this intentionally exposes displayName,
+//          email and course position to any signed-in user who searches.
+// Fields (the doc is rewritten in full on every mutation):
+//   - displayName:     string (1..80)            (required) shown to others
+//   - nameLower:       string (1..80)            (required) lowercased name for prefix search
+//   - email:           string (0..320)           (required) shown in search results
+//   - photoURL:        string(https) | null      (required) avatar, https only
+//   - completedCount:  number (0..50)            (required) # live lessons done; drives icon placement
+//   - currentLessonId: string | null             (required) lessonId they are currently on
+//   - updatedAt:       timestamp                  (required) last sync time
+//
+// ---------------------------------------------------------------
+// Collection: friendships
+// Document ID: {pairId} == "<minUid>_<maxUid>" (canonical, so each unordered
+//              pair maps to exactly one document regardless of who initiates).
+// Purpose: a mutual friendship / pending friend request between two users.
+// Fields:
+//   - participants: list<string> [uidA, uidB]    (required) sorted ascending, distinct, immutable
+//   - status:       'pending' | 'accepted'        (required) 'pending' on create
+//   - requestedBy:  string (uid)                 (required) who sent the request, immutable
+//   - createdAt:    timestamp                     (required) request.time on create, immutable
+//
+// Only the two participants may read or delete the document. Only the requester
+// may create it (status must be 'pending'). Only the OTHER participant (the
+// recipient) may update it, and only to flip status 'pending' -> 'accepted'.
+// ===============================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // -----------------------------------------------------------
+    // Helper functions
+    // -----------------------------------------------------------
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Strict schema + type + size validation. Used on BOTH create and update so
+    // a document can never be created or mutated into an invalid/oversized shape.
+    function isValidProgress(data) {
+      return data.keys().hasOnly([
+               'completedLessonIds', 'completionDates', 'lastOpenedLessonId',
+               'answeredQuestionIds', 'questionXp', 'dailyXp', 'lessonSessions'
+             ])
+        && data.keys().hasAll([
+             'completedLessonIds', 'completionDates', 'lastOpenedLessonId',
+             'answeredQuestionIds', 'questionXp', 'dailyXp', 'lessonSessions'
+           ])
+        && data.completedLessonIds is list && data.completedLessonIds.size() <= 50
+        && data.completionDates is map && data.completionDates.size() <= 50
+        && (data.lastOpenedLessonId == null ||
+            (data.lastOpenedLessonId is string && data.lastOpenedLessonId.size() <= 200))
+        && data.answeredQuestionIds is list && data.answeredQuestionIds.size() <= 5000
+        && data.questionXp is number && data.questionXp >= 0 && data.questionXp <= 100000000
+        && data.dailyXp is map && data.dailyXp.size() <= 3650
+        && data.lessonSessions is map && data.lessonSessions.size() <= 200;
+    }
+
+    // Strict schema + type + size validation for a profile document. Used on
+    // BOTH create and update.
+    function isValidProfile(data) {
+      return data.keys().hasOnly([
+               'displayName', 'nameLower', 'email', 'photoURL',
+               'completedCount', 'currentLessonId', 'updatedAt'
+             ])
+        && data.keys().hasAll([
+             'displayName', 'nameLower', 'email', 'photoURL',
+             'completedCount', 'currentLessonId', 'updatedAt'
+           ])
+        && data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 80
+        && data.nameLower is string && data.nameLower.size() >= 1 && data.nameLower.size() <= 80
+        && data.email is string && data.email.size() <= 320
+        && (data.photoURL == null ||
+            (data.photoURL is string && data.photoURL.size() <= 1000 && data.photoURL.matches('^https://.*')))
+        && data.completedCount is number && data.completedCount >= 0 && data.completedCount <= 50
+        && (data.currentLessonId == null ||
+            (data.currentLessonId is string && data.currentLessonId.size() <= 200))
+        && data.updatedAt is timestamp;
+    }
+
+    // A friendship can only be CREATED by the requester, as a canonical, sorted,
+    // 'pending' request that includes the requester as one of two distinct
+    // participants. The document id MUST be "<participants[0]>_<participants[1]>"
+    // so the unordered pair maps to exactly one document.
+    function isValidFriendshipCreate(pairId, data) {
+      return data.keys().hasOnly(['participants', 'status', 'requestedBy', 'createdAt'])
+        && data.keys().hasAll(['participants', 'status', 'requestedBy', 'createdAt'])
+        && data.participants is list && data.participants.size() == 2
+        && data.participants[0] is string && data.participants[1] is string
+        && data.participants[0].size() >= 1 && data.participants[0].size() <= 128
+        && data.participants[1].size() >= 1 && data.participants[1].size() <= 128
+        && data.participants[0] < data.participants[1]                       // distinct + sorted (no self-friend)
+        && pairId == data.participants[0] + '_' + data.participants[1]       // canonical id
+        && request.auth.uid in data.participants
+        && data.requestedBy == request.auth.uid
+        && data.status == 'pending'
+        && data.createdAt == request.time;
+    }
+
+    // A friendship can only be UPDATED by the recipient (the participant who is
+    // NOT the requester) and only to flip 'pending' -> 'accepted'. Every other
+    // field is immutable.
+    function isValidFriendshipAccept(prev, next) {
+      return next.keys().hasOnly(['participants', 'status', 'requestedBy', 'createdAt'])
+        && next.participants == prev.participants
+        && next.requestedBy == prev.requestedBy
+        && next.createdAt == prev.createdAt
+        && prev.status == 'pending'
+        && next.status == 'accepted'
+        && request.auth.uid in prev.participants
+        && request.auth.uid != prev.requestedBy;
+    }
+
+    // -----------------------------------------------------------
+    // Per-user progress documents
+    // -----------------------------------------------------------
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidProgress(request.resource.data);
+      allow update: if isOwner(userId) && isValidProgress(request.resource.data);
+      allow delete: if isOwner(userId);
+    }
+
+    // -----------------------------------------------------------
+    // Searchable, friend-visible profiles
+    // -----------------------------------------------------------
+    match /profiles/{userId} {
+      allow read: if isSignedIn();
+      allow create: if isOwner(userId) && isValidProfile(request.resource.data);
+      allow update: if isOwner(userId) && isValidProfile(request.resource.data);
+      allow delete: if isOwner(userId);
+    }
+
+    // -----------------------------------------------------------
+    // Mutual friendships / pending requests
+    // -----------------------------------------------------------
+    match /friendships/{pairId} {
+      allow read: if isSignedIn() && request.auth.uid in resource.data.participants;
+      allow create: if isSignedIn() && isValidFriendshipCreate(pairId, request.resource.data);
+      allow update: if isSignedIn() && isValidFriendshipAccept(resource.data, request.resource.data);
+      allow delete: if isSignedIn() && request.auth.uid in resource.data.participants;
+    }
+
+    // -----------------------------------------------------------
+    // Default deny: nothing else is readable or writable.
+    // -----------------------------------------------------------
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
