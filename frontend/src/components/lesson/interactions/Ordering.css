@@ -1,0 +1,85 @@
+.cci-order {
+  display: grid;
+  gap: var(--s-4);
+}
+
+.cci-order-list {
+  display: grid;
+  gap: var(--s-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cci-order-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--s-3);
+  border: 1px solid var(--cl1-border-color);
+  border-radius: var(--cl1-radius);
+  padding: var(--s-3);
+  background: var(--cl1-surface);
+  color: var(--ink);
+}
+
+.cci-order-rank {
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: var(--r-pill);
+  background: var(--accent-tint);
+  color: var(--ink-soft);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.cci-order-label {
+  font-size: 0.96rem;
+  line-height: 1.4;
+}
+
+.cci-order-controls {
+  display: inline-flex;
+  gap: var(--s-2);
+}
+
+.cci-order-move {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    border-color var(--dur-fast) var(--ease),
+    background-color var(--dur-fast) var(--ease);
+}
+
+.cci-order-move:hover:not(:disabled) {
+  border-color: var(--sketch-accent);
+  background: var(--accent-tint);
+}
+
+.cci-order-move:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.cci-order-check {
+  justify-self: start;
+}
+
+.theme-handdrawn--lesson .cci-order-row {
+  border-radius: var(--sketch-wobbly-sm);
+}
+
+.theme-handdrawn--lesson .cci-order-move {
+  border-radius: var(--sketch-wobbly-sm);
+}

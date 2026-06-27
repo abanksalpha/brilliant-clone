@@ -1,0 +1,67 @@
+/* Step 15 (concept) - grounding. A charged metal sphere joined by a conducting
+   wire to a standard earth-ground symbol, with electrons riding the wire and a
+   two-way arrow showing they can flow off to ground or up from it. Every class
+   is namespaced cci-15- and references the shared hand-drawn theme tokens so the
+   sphere and electrons match the rest of the lesson. */
+
+.cci-15-sphere {
+  fill: color-mix(in oklab, var(--sketch-muted) 50%, var(--hd-raised));
+  stroke: var(--sketch-ink);
+  stroke-width: 2.5;
+}
+
+/* Cool tint that signals the sphere is currently holding excess electrons. */
+.cci-15-sphere-charge {
+  fill: color-mix(in oklab, var(--sketch-secondary) 26%, var(--hd-raised));
+  stroke: none;
+  pointer-events: none;
+}
+
+.cci-15-sphere-sheen {
+  fill: color-mix(in oklab, var(--sketch-paper) 70%, white);
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+/* Electrons reuse the shared .cl1-electron blue; bump the stroke a touch so the
+   dots stay crisp against the tinted sphere. */
+.cci-15-sphere-electron {
+  stroke-width: 2;
+}
+
+.cci-15-wire-electron {
+  stroke-width: 2;
+}
+
+/* The grounding conductor: a hand-drawn ink line from the sphere to the earth. */
+.cci-15-wire {
+  fill: none;
+  stroke: var(--sketch-ink);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+/* The standard earth symbol: three horizontal bars shrinking downward. */
+.cci-15-ground-bar {
+  stroke: var(--sketch-ink);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+/* Two-way flow indicator: a slim line with an arrowhead at each end. */
+.cci-15-flow {
+  stroke: color-mix(in oklab, var(--sketch-secondary) 70%, var(--sketch-ink));
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.cci-15-flow-head {
+  fill: color-mix(in oklab, var(--sketch-secondary) 70%, var(--sketch-ink));
+}
+
+.cci-15-caption {
+  fill: color-mix(in oklab, var(--sketch-ink) 72%, var(--sketch-paper));
+  font-family: var(--font-hand-body);
+  font-size: 14px;
+  text-anchor: middle;
+}

@@ -65,8 +65,9 @@ export function LessonPage() {
   }
 
   if (!initialsRef.current || initialsRef.current.lessonId !== lesson.lessonId) {
-    // A finished lesson is being reviewed, so unlock every screen (completion
-    // clears the saved session, which would otherwise relock all but step 1).
+    // A finished lesson is fully unlocked for review, so force every screen open
+    // regardless of the saved session's furthest-visited step. The session is now
+    // kept on completion, so the resumed step below is the page last seen.
     const isCompleted = progress.completedLessonIds.includes(lesson.lessonId);
     initialsRef.current = {
       lessonId: lesson.lessonId,

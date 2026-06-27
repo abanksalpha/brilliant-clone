@@ -8,6 +8,13 @@ const expectedLessons = [
     counts: { totalSteps: 27, interactiveProblems: 16, conceptCards: 11 },
     prerequisites: [],
   },
+  {
+    lessonId: 'charging-conductors-insulators',
+    lessonNumber: 2,
+    title: 'Charging, Conductors & Insulators',
+    counts: { totalSteps: 26, interactiveProblems: 15, conceptCards: 11 },
+    prerequisites: ['coulombs-law'],
+  },
 ];
 
 const KNOWN_INTERACTION_TYPES = new Set([
@@ -21,6 +28,7 @@ const KNOWN_INTERACTION_TYPES = new Set([
   'sandbox',
   'build-formula',
   'vector-aim',
+  'ordering',
 ]);
 
 function getInteractiveSteps(lesson: ReturnType<typeof getCourseLessons>[number]): InteractiveStep[] {
@@ -31,7 +39,7 @@ describe('lesson content loader', () => {
   it('returns the Coulomb lesson', () => {
     const lessons = getCourseLessons();
 
-    expect(lessons).toHaveLength(1);
+    expect(lessons).toHaveLength(2);
     expect(lessons.map((lesson) => lesson.lessonId)).toEqual(
       expectedLessons.map((lesson) => lesson.lessonId),
     );
@@ -129,6 +137,10 @@ describe('lesson content records', () => {
         if (step.interactionType === 'vector-aim') {
           expect(step.vectorAim, `${where} vector-aim config`).toBeDefined();
           expect(Number.isFinite(step.vectorAim!.targetAngleDeg), `${where} target angle`).toBe(true);
+        }
+        if (step.interactionType === 'ordering') {
+          expect(step.ordering, `${where} ordering config`).toBeDefined();
+          expect(step.ordering!.items.length, `${where} ordering items`).toBeGreaterThan(1);
         }
       }
     }

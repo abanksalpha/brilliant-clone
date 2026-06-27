@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { ArrowLeft, Check, Clock, UserPlus, Users, X } from 'lucide-react';
 import { AppShell } from '../components/shell/AppShell';
 import { Avatar } from '../components/Avatar';
-import { lessonLabelAtIndex } from '../content/courseMap';
+import { friendPositionLabel } from '../content/courseMap';
 import { useSocial } from '../social/SocialContext';
 import type { Profile } from '../social/types';
 
@@ -263,7 +263,9 @@ export function FriendsPage() {
                     <Avatar name={name} photoURL={profile?.photoURL ?? null} size={44} />
                     <div className="friend-row-info">
                       <span className="friend-row-name">{name}</span>
-                      <span className="friend-row-meta">On: {lessonLabelAtIndex(profile?.completedCount ?? 0)}</span>
+                      <span className="friend-row-meta">
+                        On: {friendPositionLabel(profile?.completedCount ?? 0, profile?.completedPsetCount ?? 0)}
+                      </span>
                     </div>
                     <div className="friend-row-action">
                       <button

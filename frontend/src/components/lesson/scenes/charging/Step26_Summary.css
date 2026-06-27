@@ -1,0 +1,81 @@
+/* Step 26 (concept) - the bookend. Reuses the Step 1 sticky-balloon language and
+   adds the wall's polarized surface molecules. Every class namespaced cci-26-. */
+
+.cci-26-balloon,
+.cci-26-knot {
+  fill: color-mix(in oklab, var(--sketch-accent) 32%, white);
+  stroke: var(--sketch-ink);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+}
+
+.cci-26-string {
+  stroke: var(--sketch-ink);
+  stroke-width: 1.8;
+  fill: none;
+  stroke-linecap: round;
+  opacity: 0.5;
+}
+
+.cci-26-wall-surface {
+  stroke: var(--sketch-ink);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+
+.cci-26-hatch {
+  stroke: var(--sketch-ink);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  opacity: 0.32;
+}
+
+.cci-26-floor {
+  stroke: var(--sketch-ink);
+  stroke-width: 2;
+  stroke-linecap: round;
+  opacity: 0.28;
+}
+
+.cci-26-wall-label {
+  fill: color-mix(in oklab, var(--sketch-ink) 55%, transparent);
+  font-family: var(--font-hand-body);
+  font-size: 14px;
+  letter-spacing: 1px;
+}
+
+.cci-26-charge {
+  fill: var(--sketch-secondary);
+  font-family: var(--font-hand-title);
+  font-size: 18px;
+  font-weight: 800;
+}
+
+/* The wall's surface molecules, each polarized: positive core nudged toward the
+   balloon, electron cloud pushed into the wall. */
+.cci-26-molecule {
+  fill: color-mix(in oklab, var(--sketch-muted) 60%, var(--sketch-paper));
+  stroke: var(--sketch-ink);
+  stroke-width: 1.6;
+}
+
+.cci-26-mol-plus {
+  fill: var(--sketch-accent);
+  font-family: var(--font-hand-title);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.cci-26-mol-minus {
+  fill: var(--sketch-secondary);
+  font-family: var(--font-hand-title);
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.cci-26-mol-label {
+  fill: color-mix(in oklab, var(--sketch-ink) 62%, transparent);
+  font-family: var(--font-hand-body);
+  font-size: 12px;
+  letter-spacing: 0.5px;
+}

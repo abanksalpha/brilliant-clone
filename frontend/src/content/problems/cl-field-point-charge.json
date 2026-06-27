@@ -1,0 +1,21 @@
+{
+  "problemId": "cl-field-point-charge",
+  "lessonId": "electric-field-field-lines",
+  "unitId": "electrostatics",
+  "skillIds": ["electric-field-field-lines"],
+  "principleIds": ["field-concept"],
+  "misconceptionTags": ["inverse-square-error"],
+  "kind": "single",
+  "difficulty": 2,
+  "difficultyBand": 2,
+  "difficultyFeatures": {
+    "steps": 4,
+    "symbolic": false,
+    "calculus": false,
+    "multiPart": false,
+    "hasTrap": true
+  },
+  "provenance": "authored",
+  "title": "Field from a point charge",
+  "prompt": "Find the magnitude of the electric field at a point 2.0 m from a +3.0 microcoulomb point charge."
+}

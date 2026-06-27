@@ -134,6 +134,41 @@ describe('DashboardPage progression', () => {
     expect(within(capacitorsNode!).queryByRole('link')).toBeNull();
   });
 
+  it('unlocks every live lesson and its problem set in dev mode', () => {
+    // Dev mode persists via localStorage; stub a working one with it enabled (the
+    // URL-parsing path is covered by resolveDevMode's own tests).
+    const store = new Map<string, string>([['apt.devMode', '1']]);
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) => store.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        store.set(key, String(value));
+      },
+      removeItem: (key: string) => {
+        store.delete(key);
+      },
+      clear: () => store.clear(),
+      key: () => null,
+      length: 0,
+    });
+
+    try {
+      renderDashboard();
+
+      // Charging is normally gated behind finishing Coulomb and its problem set,
+      // but dev mode opens the lesson node...
+      const chargingLi = screen.getByText('Charging, Conductors & Insulators').closest('li');
+      expect(chargingLi?.className).toContain('path-node--active');
+      expect(within(chargingLi!).getByRole('link')).toBeInTheDocument();
+
+      // ...and its problem-set node (unique aria-label) becomes clickable too.
+      expect(
+        screen.getByRole('link', { name: 'Problem set for Charging, Conductors & Insulators' }),
+      ).toBeInTheDocument();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('persists last opened lesson to the cloud when a learner starts a topic', () => {
     renderDashboard();
 
@@ -163,7 +198,7 @@ describe('DashboardPage progression', () => {
     expect(lesson1).toBeTruthy();
 
     expect(within(lesson1!).getByRole('link', { name: 'Review lesson' })).toBeInTheDocument();
-    expect(screen.getByText(`1/${COURSE_LESSON_TOTAL}`)).toBeInTheDocument();
+    expect(screen.getByText(`1/${COURSE_LESSON_TOTAL * 2}`)).toBeInTheDocument();
     expect(screen.getByText('160')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'AP Physics C: Electricity and Magnetism' })).toBeInTheDocument();
   });
@@ -229,5 +264,19 @@ describe('DashboardPage progression', () => {
     const goalCard = screen.getByText("Today's goal").closest('.home-stat');
     expect(goalCard?.className).toContain('home-stat--goal-met');
     expect(screen.queryByText(`${surpassing}/${DAILY_XP_GOAL}`)).not.toBeNull();
+  });
+
+  it("turns today's goal card green when daily XP exactly reaches the goal", () => {
+    cloud.states.set(
+      'user-1',
+      makeState({
+        dailyXp: { [todayStamp()]: DAILY_XP_GOAL },
+      }),
+    );
+
+    renderDashboard();
+
+    const goalCard = screen.getByText("Today's goal").closest('.home-stat');
+    expect(goalCard?.className).toContain('home-stat--goal-met');
   });
 });

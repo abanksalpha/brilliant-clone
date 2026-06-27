@@ -1,0 +1,31 @@
+/* Step 14: "What sign after touching?" supporting figure. Static before/after
+   pair that proves conduction leaves the same sign. Namespaced cci-14- and
+   references the shared hand-drawn theme tokens so the charge glyphs and arrow
+   sit in the same visual family as the Coulomb and conduction scenes. */
+
+/* The "before" / "after" state headers above each group. */
+.cci-14-state {
+  fill: color-mix(in oklab, var(--sketch-ink) 64%, transparent);
+  font-family: var(--font-hand-title);
+  font-size: 14px;
+}
+
+/* Small captions under each group. */
+.cci-14-cap {
+  fill: color-mix(in oklab, var(--sketch-ink) 70%, transparent);
+  font-family: var(--font-hand-body);
+  font-size: 13px;
+}
+
+/* The result caption emphasizes the takeaway in the cool "negative" hue. */
+.cci-14-cap--same {
+  fill: var(--sketch-secondary);
+  font-weight: 700;
+}
+
+/* Render the transition arrow in soft ink so it reads as "touch, then separate",
+   not as a force arrow (which would be the shared blue). Mirrors Step 25. */
+.cci-14-flow .force-arrow,
+.cci-14-flow .inline-arrow-head {
+  --arrow-color: color-mix(in oklab, var(--sketch-ink) 68%, var(--sketch-paper));
+}

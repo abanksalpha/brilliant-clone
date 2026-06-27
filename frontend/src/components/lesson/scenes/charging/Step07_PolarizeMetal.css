@@ -1,0 +1,55 @@
+/* Step 7 - Polarize the metal. Co-located styling, every class namespaced
+   cci-07-. Colors come from the shared sketch tokens so the rod, electrons and
+   positive cores match the rest of the charging lesson. */
+
+.cci-07-sphere {
+  fill: color-mix(in oklab, var(--sketch-muted) 42%, var(--hd-raised));
+  stroke: var(--sketch-ink);
+  stroke-width: 2.5;
+}
+
+.cci-07-sphere-sheen {
+  fill: color-mix(in oklab, var(--sketch-paper) 70%, white);
+  opacity: 0.5;
+}
+
+.cci-07-electron {
+  fill: var(--sketch-secondary);
+  stroke: var(--sketch-ink);
+  stroke-width: 1.5;
+  transition: cx 90ms ease-out, cy 90ms ease-out;
+}
+
+.cci-07-plus {
+  transition: opacity 120ms ease-out;
+}
+
+.cci-07-plus-mark {
+  fill: var(--sketch-accent);
+  font-family: var(--font-hand-title);
+  font-weight: 800;
+  font-size: 19px;
+}
+
+.cci-07-rod {
+  fill: color-mix(in oklab, var(--sketch-secondary) 58%, var(--sketch-paper));
+  stroke: var(--sketch-ink);
+  stroke-width: 2.5;
+}
+
+.cci-07-rod-minus {
+  fill: var(--sketch-paper);
+}
+
+.cci-07-caption {
+  fill: color-mix(in oklab, var(--sketch-ink) 72%, var(--sketch-paper));
+  font-family: var(--font-hand-body);
+  font-size: 14px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cci-07-electron,
+  .cci-07-plus {
+    transition: none;
+  }
+}

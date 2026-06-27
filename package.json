@@ -1,8 +1,8 @@
 {
-  "name": "physics-arcade",
+  "name": "apt",
   "version": "0.0.0",
   "private": true,
-  "description": "Physics Arcade workspace",
+  "description": "APT workspace",
   "scripts": {
     "dev": "npm --prefix frontend run dev",
     "build": "npm --prefix frontend run build",

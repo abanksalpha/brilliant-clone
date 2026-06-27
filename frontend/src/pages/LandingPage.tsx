@@ -489,9 +489,16 @@ export function LandingPage() {
           <p>
             Reading the textbook and grinding practice tests only gets you so far. Every concept here is a
             lesson you work through yourself: you change something and watch what happens, then figure out
-            why. After that, you flip the script and teach it back to an AI student that starts out confidently
-            wrong. You learn it far better this way, because you don't fully understand a concept until you can
-            catch every mistake it makes.
+            why. The more you do, the more it sticks.
+          </p>
+        </section>
+
+        <section className="landing-intro" aria-labelledby="practice-title">
+          <h2 id="practice-title">Practice that checks your work</h2>
+          <p>
+            After each lesson, you get a set of problems you solve by hand, right on the screen. An AI grader
+            reads your handwritten work and shows you exactly where your reasoning breaks, with hints whenever
+            you get stuck.
           </p>
         </section>
 

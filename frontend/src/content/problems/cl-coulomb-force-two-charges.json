@@ -1,0 +1,21 @@
+{
+  "problemId": "cl-coulomb-force-two-charges",
+  "lessonId": "coulombs-law",
+  "unitId": "electrostatics",
+  "skillIds": ["coulombs-law"],
+  "principleIds": ["coulomb-force"],
+  "misconceptionTags": ["inverse-square-error"],
+  "kind": "single",
+  "difficulty": 2,
+  "difficultyBand": 2,
+  "difficultyFeatures": {
+    "steps": 4,
+    "symbolic": false,
+    "calculus": false,
+    "multiPart": false,
+    "hasTrap": true
+  },
+  "provenance": "authored",
+  "title": "Force between two point charges",
+  "prompt": "Two point charges, +2.0 microcoulomb and +3.0 microcoulomb, are 0.10 m apart. Find the magnitude of the electric force between them."
+}

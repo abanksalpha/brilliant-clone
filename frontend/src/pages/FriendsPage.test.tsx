@@ -138,7 +138,13 @@ vi.mock('../social/friendsStore', async (importOriginal) => {
   };
 });
 
-function profile(uid: string, displayName: string, email = '', completedCount = 0): Profile {
+function profile(
+  uid: string,
+  displayName: string,
+  email = '',
+  completedCount = 0,
+  completedPsetCount = 0,
+): Profile {
   return {
     uid,
     displayName,
@@ -146,6 +152,7 @@ function profile(uid: string, displayName: string, email = '', completedCount = 
     email,
     photoURL: null,
     completedCount,
+    completedPsetCount,
     currentLessonId: null,
   };
 }
@@ -212,7 +219,7 @@ describe('FriendsPage', () => {
   });
 
   it('accepts an incoming request and moves the person into the friends list', async () => {
-    store.state.profiles.set('ann', profile('ann', 'Ann Newton', 'ann@example.com', 2));
+    store.state.profiles.set('ann', profile('ann', 'Ann Newton', 'ann@example.com', 2, 2));
     store.state.friendships = [
       { pairId: pairId('me', 'ann'), participants: sortedPair('me', 'ann'), status: 'pending', requestedBy: 'ann' },
     ];
@@ -226,8 +233,9 @@ describe('FriendsPage', () => {
       const friendsList = screen.getByLabelText('Your friends');
       expect(within(friendsList).getByText('Ann Newton')).toBeInTheDocument();
     });
-    // The friend's position is rendered from their completedCount (index 2).
-    expect(screen.getByText(/On: Charging, Conductors & Insulators/)).toBeInTheDocument();
+    // Position is rendered from both counts: 2 lessons done with both their
+    // problem sets done sits on the next lesson (index 2).
+    expect(screen.getByText(/On: Electric Field & Field Lines/)).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: /friend requests/i })).not.toBeInTheDocument();
   });
 });

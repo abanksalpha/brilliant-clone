@@ -16,6 +16,10 @@ rules_version = '2';
 //   - questionXp:          number (>= 0)         (required) XP from questions
 //   - dailyXp:             map<string,number>    (required) 'YYYY-MM-DD' -> xp
 //   - lessonSessions:      map<string,map>       (required) lessonId -> { stepIndex, maxVisitedStepIndex }
+//   - misconceptions:      map<string,map>       (optional) misconceptionId -> { caught, missed, lastSeenISO, strength }
+//   - misconceptionGraph:  map<string,map>       (optional) nodeId -> { id, status, principleId, wrongBelief, specificNote, caught, missed, strength, lastSeenISO, caughtDayStamps, createdISO }
+//   - problemAttempts:     map<string,map>       (optional) problemId -> { attempts, solvedISO?, hintsUsed }
+//   - problemSessions:     map<string,map>       (optional) setId -> { index, visitedCount, solvedProblemIds, problemIds, work }
 //
 // A user may only ever read or write their OWN users document. No user can read
 // or write another user's users document.
@@ -34,6 +38,7 @@ rules_version = '2';
 //   - email:           string (0..320)           (required) shown in search results
 //   - photoURL:        string(https) | null      (required) avatar, https only
 //   - completedCount:  number (0..50)            (required) # live lessons done; drives icon placement
+//   - completedPsetCount: number (0..50)         (optional) # of those lessons' problem sets done; refines placement
 //   - currentLessonId: string | null             (required) lessonId they are currently on
 //   - updatedAt:       timestamp                  (required) last sync time
 //
@@ -72,7 +77,8 @@ service cloud.firestore {
     function isValidProgress(data) {
       return data.keys().hasOnly([
                'completedLessonIds', 'completionDates', 'lastOpenedLessonId',
-               'answeredQuestionIds', 'questionXp', 'dailyXp', 'lessonSessions'
+               'answeredQuestionIds', 'questionXp', 'dailyXp', 'lessonSessions',
+               'misconceptions', 'problemAttempts', 'problemSessions', 'misconceptionGraph'
              ])
         && data.keys().hasAll([
              'completedLessonIds', 'completionDates', 'lastOpenedLessonId',
@@ -85,7 +91,15 @@ service cloud.firestore {
         && data.answeredQuestionIds is list && data.answeredQuestionIds.size() <= 5000
         && data.questionXp is number && data.questionXp >= 0 && data.questionXp <= 100000000
         && data.dailyXp is map && data.dailyXp.size() <= 3650
-        && data.lessonSessions is map && data.lessonSessions.size() <= 200;
+        && data.lessonSessions is map && data.lessonSessions.size() <= 200
+        && (!('misconceptions' in data) ||
+            (data.misconceptions is map && data.misconceptions.size() <= 5000))
+        && (!('problemAttempts' in data) ||
+            (data.problemAttempts is map && data.problemAttempts.size() <= 5000))
+        && (!('problemSessions' in data) ||
+            (data.problemSessions is map && data.problemSessions.size() <= 200))
+        && (!('misconceptionGraph' in data) ||
+            (data.misconceptionGraph is map && data.misconceptionGraph.size() <= 500));
     }
 
     // Strict schema + type + size validation for a profile document. Used on
@@ -93,7 +107,7 @@ service cloud.firestore {
     function isValidProfile(data) {
       return data.keys().hasOnly([
                'displayName', 'nameLower', 'email', 'photoURL',
-               'completedCount', 'currentLessonId', 'updatedAt'
+               'completedCount', 'completedPsetCount', 'currentLessonId', 'updatedAt'
              ])
         && data.keys().hasAll([
              'displayName', 'nameLower', 'email', 'photoURL',
@@ -105,6 +119,8 @@ service cloud.firestore {
         && (data.photoURL == null ||
             (data.photoURL is string && data.photoURL.size() <= 1000 && data.photoURL.matches('^https://.*')))
         && data.completedCount is number && data.completedCount >= 0 && data.completedCount <= 50
+        && (!('completedPsetCount' in data) ||
+            (data.completedPsetCount is number && data.completedPsetCount >= 0 && data.completedPsetCount <= 50))
         && (data.currentLessonId == null ||
             (data.currentLessonId is string && data.currentLessonId.size() <= 200))
         && data.updatedAt is timestamp;
@@ -171,6 +187,16 @@ service cloud.firestore {
       allow create: if isSignedIn() && isValidFriendshipCreate(pairId, request.resource.data);
       allow update: if isSignedIn() && isValidFriendshipAccept(resource.data, request.resource.data);
       allow delete: if isSignedIn() && request.auth.uid in resource.data.participants;
+    }
+
+    // -----------------------------------------------------------
+    // Server-only synthesized problems. Written and read by Cloud
+    // Functions via the admin SDK, which bypasses these rules. No
+    // client may ever read or write this collection (the keys hold
+    // answers), so deny every client path explicitly.
+    // -----------------------------------------------------------
+    match /synthesisProblems/{problemId} {
+      allow read, write: if false;
     }
 
     // -----------------------------------------------------------

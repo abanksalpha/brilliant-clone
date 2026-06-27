@@ -10,7 +10,8 @@ export type InteractionType =
   | 'numeric'
   | 'sandbox'
   | 'build-formula'
-  | 'vector-aim';
+  | 'vector-aim'
+  | 'ordering';
 
 export type VisualConfig = {
   type: 'text-description';
@@ -85,6 +86,18 @@ export type VectorAimConfig = {
   targetSign?: '+' | '-';
 };
 
+export type OrderingItem = {
+  id: string;
+  label: string;
+};
+
+export type OrderingConfig = {
+  // Items listed in their CORRECT order. The widget shuffles them for display.
+  items: OrderingItem[];
+  // Optional explicit correct id order; defaults to the items' own order.
+  correctOrder?: string[];
+};
+
 export type BaseStep = {
   stepNumber: number;
   title?: string;
@@ -112,6 +125,7 @@ export type InteractiveStep = BaseStep & {
   sandbox?: SandboxConfig;
   buildFormula?: BuildFormulaConfig;
   vectorAim?: VectorAimConfig;
+  ordering?: OrderingConfig;
 };
 
 export type Step = ConceptStep | InteractiveStep;

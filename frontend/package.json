@@ -1,5 +1,5 @@
 {
-  "name": "physics-arcade",
+  "name": "apt",
   "version": "0.0.0",
   "private": true,
   "description": "AP Physics C electrostatics tutor",
@@ -14,6 +14,7 @@
     "canvas-confetti": "^1.9.4",
     "firebase": "^12.15.0",
     "lucide-react": "^1.21.0",
+    "pdfjs-dist": "^6.0.227",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-router-dom": "^7.18.0"

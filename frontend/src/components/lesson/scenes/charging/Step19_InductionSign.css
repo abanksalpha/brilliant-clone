@@ -1,0 +1,94 @@
+/* Step 19 - what sign after induction? A static before/after supporting figure
+   (the rail holds the choices). All classes are namespaced cci-19- and pull from
+   the shared hand-drawn sketch tokens so the sphere, rod, and charges sit in the
+   same visual family as the Coulomb scenes and the step 18 induction animation. */
+
+.cci-19-head {
+  fill: color-mix(in oklab, var(--sketch-ink) 80%, transparent);
+  font-family: var(--font-hand-title);
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  text-anchor: middle;
+}
+
+/* The metal conductor, matched to the step 18 induction sphere. */
+.cci-19-sphere-body {
+  fill: color-mix(in oklab, var(--sketch-muted) 50%, var(--hd-raised));
+  stroke: var(--sketch-ink);
+  stroke-width: 2.5;
+}
+
+/* Warm overlay marking the after sphere as net positive. */
+.cci-19-pos {
+  fill: color-mix(in oklab, var(--sketch-accent) 34%, var(--hd-raised));
+  stroke: none;
+  pointer-events: none;
+}
+
+/* Dashed accent ring on the finished, positively charged result. */
+.cci-19-ring {
+  fill: none;
+  stroke: var(--sketch-accent);
+  stroke-width: 2;
+  stroke-dasharray: 4 6;
+  opacity: 0.85;
+}
+
+/* The charged rod (negative): a hand-drawn capsule in the cool secondary hue. */
+.cci-19-rod {
+  fill: color-mix(in oklab, var(--sketch-secondary) 24%, var(--hd-raised));
+  stroke: var(--sketch-ink);
+  stroke-width: 2.5;
+}
+
+.cci-19-wire {
+  fill: none;
+  stroke: var(--sketch-ink);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.cci-19-ground line {
+  stroke: var(--sketch-ink);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+/* The before/after flow arrow: a plain process arrow, not a force. */
+.cci-19-flow {
+  stroke: color-mix(in oklab, var(--sketch-ink) 70%, transparent);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+
+.cci-19-flow-head {
+  fill: color-mix(in oklab, var(--sketch-ink) 70%, transparent);
+}
+
+.cci-19-tag {
+  fill: color-mix(in oklab, var(--sketch-ink) 65%, transparent);
+  font-family: var(--font-hand-body);
+  font-size: 12px;
+  text-anchor: middle;
+}
+
+.cci-19-caption {
+  fill: color-mix(in oklab, var(--sketch-ink) 65%, transparent);
+  font-family: var(--font-hand-body);
+  font-size: 12px;
+  text-anchor: middle;
+}
+
+.cci-19-status {
+  fill: color-mix(in oklab, var(--sketch-ink) 80%, transparent);
+  font-family: var(--font-hand-title);
+  font-weight: 700;
+  font-size: 15px;
+  text-anchor: middle;
+}
+
+.cci-19-status--pos {
+  fill: var(--sketch-accent);
+}

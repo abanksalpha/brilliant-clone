@@ -24,6 +24,30 @@ export function revealLessonOneGates() {
   }
 }
 
+// Lesson 2 hides several answers behind exploration too (drag a rod, step through
+// induction). This trips those gates generically and is a no-op on any step that
+// does not expose the lesson-2 explore controls. Every explore-gated lesson-2
+// scene must satisfy one of these contracts: an SVG slider named "Charged rod" or
+// "Test charge" the driver nudges, or a button with
+// data-testid="cci-explore-trigger" the driver clicks (repeatedly for staged
+// scenes such as induction).
+export function revealLessonTwoGates() {
+  for (const name of ['Charged rod', 'Test charge']) {
+    for (const slider of screen.queryAllByRole('slider', { name })) {
+      for (let index = 0; index < 20; index += 1) fireEvent.keyDown(slider, { key: 'ArrowLeft' });
+      for (let index = 0; index < 20; index += 1) fireEvent.keyDown(slider, { key: 'ArrowRight' });
+    }
+  }
+
+  // Staged scenes advance one stage per click and keep the same trigger; click
+  // until it is gone, with a guard against an unexpected infinite loop.
+  for (let guard = 0; guard < 12; guard += 1) {
+    const triggers = screen.queryAllByTestId('cci-explore-trigger');
+    if (triggers.length === 0) break;
+    fireEvent.click(triggers[0]);
+  }
+}
+
 async function clickAdvance(user: LessonUser) {
   await user.click(screen.getByRole('button', { name: ADVANCE_LABEL }));
 }
@@ -44,6 +68,30 @@ async function solveNumeric(user: LessonUser, step: Step) {
   await user.clear(input);
   await user.type(input, answer);
   await user.click(screen.getByRole('button', { name: 'Check answer' }));
+}
+
+async function solveOrdering(user: LessonUser, step: Step) {
+  if (step.type !== 'interactive' || !step.ordering) return;
+  const correctIds = step.ordering.correctOrder ?? step.ordering.items.map((item) => item.id);
+  const labelById = new Map(step.ordering.items.map((item) => [item.id, item.label]));
+  const currentOrder = () =>
+    Array.from(document.querySelectorAll('[data-cci-order-id]')).map(
+      (element) => element.getAttribute('data-cci-order-id') ?? '',
+    );
+
+  // Selection sort using the widget's Up controls: settle each id into place from
+  // the top down so already-placed rows are never disturbed.
+  for (let targetIndex = 0; targetIndex < correctIds.length; targetIndex += 1) {
+    const wantedId = correctIds[targetIndex];
+    let currentIndex = currentOrder().indexOf(wantedId);
+    while (currentIndex > targetIndex) {
+      const label = labelById.get(wantedId) ?? '';
+      await user.click(screen.getByRole('button', { name: `Move ${label} up` }));
+      currentIndex -= 1;
+    }
+  }
+
+  await user.click(screen.getByRole('button', { name: 'Check order' }));
 }
 
 async function solveBuildFormula(user: LessonUser, step: Step) {
@@ -100,6 +148,9 @@ export async function completeCurrentStep(user: LessonUser, step: Step) {
     case 'numeric':
       await solveNumeric(user, step);
       break;
+    case 'ordering':
+      await solveOrdering(user, step);
+      break;
     case 'build-formula':
       await solveBuildFormula(user, step);
       break;
@@ -113,11 +164,13 @@ export async function completeCurrentStep(user: LessonUser, step: Step) {
       const rub = screen.queryByRole('button', { name: 'Rub A against B' });
       if (rub) await user.click(rub);
       revealLessonOneGates();
+      revealLessonTwoGates();
       await chooseCorrect(user, step);
       break;
     }
     default:
       revealLessonOneGates();
+      revealLessonTwoGates();
       await chooseCorrect(user, step);
   }
 

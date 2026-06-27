@@ -1,0 +1,32 @@
+/* Step 23 (concept) - "Charge rides the surface". A solid metal blob whose
+   excess electrons have all pushed apart onto the outer surface, leaving the
+   interior empty. Namespaced cci-23-; colours come from the shared sketch
+   tokens so the metal and electrons match the rest of the lesson. */
+
+.cci-23-blob {
+  fill: color-mix(in oklab, var(--sketch-muted) 42%, var(--hd-raised));
+  stroke: var(--sketch-ink);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+}
+
+/* Soft highlight so the body reads as a solid 3D piece of metal, not a ring. */
+.cci-23-sheen {
+  fill: color-mix(in oklab, var(--sketch-paper) 70%, white);
+  opacity: 0.5;
+}
+
+/* Excess electrons reuse the shared electron blue; they sit centred on the
+   surface line. A faint glow keeps the ring lively. */
+.cci-23-electron {
+  stroke-width: 1.5;
+  filter: drop-shadow(0 0 2px color-mix(in oklab, var(--sketch-secondary) 45%, transparent));
+}
+
+/* The empty-interior note is set in soft ink so it labels without competing
+   with the charges on the rim. */
+.cci-23-interior-label {
+  fill: var(--hd-ink-faint);
+  font-family: var(--font-hand-body);
+  font-size: 12px;
+}

@@ -31,6 +31,12 @@ function clearLegacyLocalProgress() {
 
 clearLegacyLocalProgress();
 
+// Dev-only: expose window.resetCoulombToLastScreen() for testing. Excluded from
+// production builds (the static DEV check drops the dynamic import).
+if (import.meta.env.DEV) {
+  void import('./dev/devReset');
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>

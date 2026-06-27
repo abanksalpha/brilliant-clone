@@ -1,4 +1,5 @@
 import type { Lesson } from '../../content';
+import { CHARGING_LESSON_ID, ChargingExperience } from './ChargingExperience';
 import { COULOMB_LESSON_ID, CoulombExperience } from './CoulombExperience';
 import { InteractionRenderer } from './InteractionRenderer';
 import { LessonComplete } from './LessonComplete';
@@ -61,6 +62,13 @@ export function LessonRenderer({
       />
       {lesson.lessonId === COULOMB_LESSON_ID ? (
         <CoulombExperience
+          isFinalStep={isFinalStep}
+          learnerStep={learnerStep}
+          onContinue={onContinue}
+          step={rawStep}
+        />
+      ) : lesson.lessonId === CHARGING_LESSON_ID ? (
+        <ChargingExperience
           isFinalStep={isFinalStep}
           learnerStep={learnerStep}
           onContinue={onContinue}

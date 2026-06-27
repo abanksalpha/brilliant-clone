@@ -1,0 +1,51 @@
+/* Step 1 - the sticky balloon. Matches the Coulomb HookScene balloon language. */
+
+.cci-01-balloon,
+.cci-01-knot {
+  fill: color-mix(in oklab, var(--sketch-accent) 32%, white);
+  stroke: var(--sketch-ink);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+}
+
+.cci-01-string {
+  stroke: var(--sketch-ink);
+  stroke-width: 1.8;
+  fill: none;
+  stroke-linecap: round;
+  opacity: 0.5;
+}
+
+.cci-01-wall-surface {
+  stroke: var(--sketch-ink);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+
+.cci-01-hatch {
+  stroke: var(--sketch-ink);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  opacity: 0.32;
+}
+
+.cci-01-floor {
+  stroke: var(--sketch-ink);
+  stroke-width: 2;
+  stroke-linecap: round;
+  opacity: 0.28;
+}
+
+.cci-01-wall-label {
+  fill: color-mix(in oklab, var(--sketch-ink) 55%, transparent);
+  font-family: var(--font-hand-body);
+  font-size: 14px;
+  letter-spacing: 1px;
+}
+
+.cci-01-charge {
+  fill: var(--sketch-secondary);
+  font-family: var(--font-hand-title);
+  font-size: 18px;
+  font-weight: 800;
+}

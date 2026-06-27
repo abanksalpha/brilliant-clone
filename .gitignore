@@ -10,3 +10,20 @@ frontend/.env.local
 frontend/.env.*.local
 coverage
 frontend/coverage
+
+# build tool caches
+.vite
+frontend/.vite
+
+# subagent scratch
+.sdd/
+
+# backend functions build and secrets
+backend/functions/lib
+backend/functions/.secret.local
+
+# OS junk and local logs
+.DS_Store
+*-debug.log
+firebase-debug.log
+.vercel

@@ -8,7 +8,7 @@ import { calculateStreakDays } from '../../progress/dashboardProgress';
  */
 export function StatDock() {
   const { progress, totalXp } = useProgress();
-  const streak = calculateStreakDays(progress.completionDates);
+  const streak = calculateStreakDays(progress);
 
   return (
     <div className="stat-dock">

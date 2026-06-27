@@ -1,0 +1,60 @@
+/* Step 21 (concept) - insulators polarize too. A charged rod beside an insulator
+   block whose bound molecules have each turned into a tiny dipole, all lined up
+   with the plus (opposite) end facing the rod. Colours come from the shared
+   sketch tokens so the rod, the red plus ends and the blue minus ends match the
+   rest of the lesson. Every class is namespaced cci-21-. */
+
+.cci-21-block {
+  fill: color-mix(in oklab, var(--sketch-ink) 15%, var(--hd-raised));
+  stroke: var(--sketch-ink);
+  stroke-width: 2.5;
+}
+
+/* The bound molecule body that carries the two charge ends. */
+.cci-21-body {
+  fill: color-mix(in oklab, var(--sketch-paper) 80%, var(--sketch-muted));
+  stroke: color-mix(in oklab, var(--sketch-ink) 55%, var(--hd-raised));
+  stroke-width: 1.4;
+}
+
+/* Plus end: the opposite charge, drawn in the lesson accent red. */
+.cci-21-pos {
+  fill: var(--sketch-accent);
+  stroke: var(--sketch-ink);
+  stroke-width: 1.4;
+}
+
+/* Minus end: drawn in the lesson electron blue. */
+.cci-21-neg {
+  fill: var(--sketch-secondary);
+  stroke: var(--sketch-ink);
+  stroke-width: 1.4;
+}
+
+/* White sign bars sit on top of each charged end, like the rod marks. */
+.cci-21-sign {
+  fill: var(--sketch-paper);
+}
+
+.cci-21-rod-body {
+  fill: color-mix(in oklab, var(--sketch-secondary) 58%, var(--sketch-paper));
+  stroke: var(--sketch-ink);
+  stroke-width: 2.5;
+}
+
+.cci-21-rod-minus {
+  fill: var(--sketch-paper);
+}
+
+.cci-21-caption {
+  fill: color-mix(in oklab, var(--sketch-ink) 72%, var(--sketch-paper));
+  font-family: var(--font-hand-body);
+  font-size: 14px;
+}
+
+.cci-21-block-label {
+  fill: var(--sketch-ink);
+  font-family: var(--font-hand-title);
+  font-weight: 700;
+  font-size: 16px;
+}

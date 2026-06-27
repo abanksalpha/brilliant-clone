@@ -44,6 +44,7 @@ input {
 }
 
 button,
+.secondary-button,
 .secondary-link,
 .lesson-card {
   min-height: 44px;
@@ -151,6 +152,7 @@ p {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 6px;
   border: 1px solid oklch(31% 0.034 74);
   border-radius: 10px;
   padding: 10px 15px;
@@ -3704,7 +3706,9 @@ p {
   --cl1-border-color: oklch(82% 0.025 78);
   --cl1-radius: 12px;
   --cl1-surface: oklch(99% 0.006 82);
-  grid-template-columns: minmax(0, 1.3fr) minmax(300px, 0.85fr);
+  /* Prompt rail on the left, diagram stage on the right. The stage keeps the
+     wider track; `order` swaps the two columns without reordering the DOM. */
+  grid-template-columns: minmax(300px, 0.85fr) minmax(0, 1.3fr);
 }
 
 .cl1-stage {
@@ -3715,6 +3719,7 @@ p {
   border-color: var(--cl1-border-color);
   border-radius: var(--cl1-radius);
   background: var(--cl1-surface);
+  order: 2;
 }
 
 .cl1-rail {
@@ -3724,6 +3729,7 @@ p {
   border: 1px solid var(--cl1-border-color);
   border-radius: var(--cl1-radius);
   background: var(--cl1-surface);
+  order: 1;
 }
 
 /* Pair the "Key idea" label tightly with its body text. The rail's 14px grid
@@ -3912,8 +3918,15 @@ p {
     grid-template-columns: 1fr;
   }
 
+  /* Stacked on phones: restore source order so the diagram sits on top of the
+     prompt, matching the read-the-diagram-first pedagogy. */
   .cl1-stage {
     min-height: 0;
+    order: 0;
+  }
+
+  .cl1-rail {
+    order: 0;
   }
 
   .cl1-compare-grid {
@@ -4741,7 +4754,12 @@ a.path-node-btn:active {
 .lesson-shell {
   display: flex;
   flex-direction: column;
+  /* 100vh is wrong on mobile: it counts the area behind the browser's URL bar,
+     which pushes the full-screen problem player's bottom action dock off the
+     visible screen. dvh tracks the actually-visible height. vh stays as a
+     fallback for the few browsers without dvh. */
   min-height: 100vh;
+  min-height: 100dvh;
   background: var(--paper);
 }
 
@@ -4815,6 +4833,11 @@ a.path-node-btn:active {
 }
 
 .seg--done {
+  background: var(--success);
+  border-color: var(--success-lip);
+}
+
+.seg--solved {
   background: var(--success);
   border-color: var(--success-lip);
 }
@@ -6211,6 +6234,11 @@ a.path-node-btn:active {
   border-color: var(--sketch-ink);
 }
 
+.theme-handdrawn--lesson .seg--solved {
+  background: color-mix(in oklab, var(--success) 72%, var(--sketch-paper));
+  border-color: var(--sketch-ink);
+}
+
 .theme-handdrawn--lesson .seg--current {
   background: var(--sketch-accent);
   border-color: var(--sketch-ink);
@@ -6863,6 +6891,10 @@ a.path-node-btn:active {
 
 .theme-handdrawn--lesson .seg-progress .seg--done {
   background: color-mix(in oklab, var(--sketch-secondary) 68%, var(--sketch-paper));
+}
+
+.theme-handdrawn--lesson .seg-progress .seg--solved {
+  background: color-mix(in oklab, var(--success) 72%, var(--sketch-paper));
 }
 
 .theme-handdrawn--lesson .seg-progress .seg--current {
@@ -8123,6 +8155,42 @@ a.path-node-btn:hover ~ .path-node-label {
   transform: translateY(-4.875px);
 }
 
+/* Optically center inline icons with the text beside them. The hand fonts are
+   not vertically symmetric in their line box, so a flex-centered icon does not
+   sit on the text's optical center. The correction is expressed in em (a
+   fraction of the font size) so it holds at any button size, and the per-font
+   value comes from each font's real metrics:
+   - Kalam (dashboard + mastery buttons) has a deep descender that drops a
+     flex-centered icon low; lift it by the same ratio verified on the title
+     (4.875px / 28.8px = 0.169em).
+   - Patrick Hand (lesson + problem-set buttons) has a shallow descender, so its
+     icons land just above the cap-height center; nudge them down a hair. */
+.app-shell--handdrawn .home-hero-actions .secondary-button svg,
+.app-shell--handdrawn .home-hero-actions .secondary-link svg,
+.app-shell--handdrawn .mastery-empty .secondary-button svg,
+.app-shell--handdrawn .friends-back svg {
+  transform: translateY(-0.169em);
+}
+
+.theme-handdrawn--lesson .problem-player .secondary-button svg,
+.theme-handdrawn--lesson .problem-player .secondary-link:not(.ink-tool) svg {
+  transform: translateY(0.0345em);
+}
+
+/* Feedback headings (e.g. the caution sign next to "Grading failed", the check
+   by "Solved") pair a Kalam title with an icon. Flex-center the row, then lift
+   the icon to the text's optical center like the other hand-font icons. */
+.problem-feedback h3 {
+  display: flex;
+  align-items: center;
+  gap: var(--s-1);
+}
+
+.problem-feedback h3 svg {
+  flex: none;
+  transform: translateY(-0.169em);
+}
+
 .app-shell--handdrawn .friends-back {
   border: 3px solid var(--sketch-ink);
   border-radius: var(--sketch-wobbly-sm);
@@ -8229,4 +8297,891 @@ a.path-node-btn:hover ~ .path-node-label {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* ===========================================================================
+   Ink canvas (Task S2)
+   Minimal layout only: stack the ink + annotation layers and lay out a small
+   tool row. Appended last so it never reorders the cascade above. Colors and
+   radii reuse existing tokens; no existing classes are restyled here.
+   ======================================================================== */
+.ink-canvas {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+
+.ink-toolbar {
+  display: flex;
+  gap: var(--s-3);
+}
+
+/* Square icon buttons. They reuse .secondary-link for the look; this only
+   tightens the padding and marks the active tool. */
+.ink-tool {
+  padding: var(--s-2);
+}
+
+.ink-tool[aria-pressed='true'] {
+  border-color: var(--sketch-accent);
+  color: var(--sketch-accent);
+}
+
+/* Keep the active (red) tool's border red on hover and press; the shared
+   hover style would otherwise repaint it with the ink (black) border. */
+.theme-handdrawn .ink-tool[aria-pressed='true']:hover,
+.theme-handdrawn .ink-tool[aria-pressed='true']:active {
+  border-color: var(--sketch-accent);
+}
+
+.ink-stage {
+  position: relative;
+  width: 100%;
+  min-height: 360px;
+  border: 3px solid var(--sketch-ink);
+  border-radius: var(--sketch-wobbly-sm);
+  background: var(--sketch-paper);
+  overflow: hidden;
+  touch-action: none;
+}
+
+.ink-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.ink-layer--base {
+  touch-action: none;
+  cursor: crosshair;
+}
+
+/* The overlay paints on top but must let pointer events fall through to the
+   ink layer below it. */
+.ink-layer--overlay {
+  pointer-events: none;
+}
+
+/* === Problem player (Task G) ==========================================
+   Layout only. All visual styling is inherited from reused classes
+   (.lesson-experience, .experience-panel, .feedback-panel, .ink-canvas,
+   .secondary-button/.secondary-link, .session-chrome). These rules just
+   arrange them and never restyle the shared classes. Tokens only. */
+.problem-experience {
+  /* Hand the ink workspace the dominant column; the prompt stays compact. */
+  grid-template-columns: minmax(0, 0.85fr) minmax(320px, 1.15fr);
+}
+
+.problem-workspace {
+  display: grid;
+  gap: var(--s-4);
+  align-content: start;
+}
+
+.problem-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-3);
+}
+
+@media (max-width: 700px) {
+  .problem-experience {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Task I: dashboard quick links, problem-set affordance, mastery map. */
+
+/* The dashboard and mastery map render inside the hand drawn app shell, which
+   (unlike the lesson shells) ships no sketch treatment for these link buttons.
+   Give them the same hand drawn look as their surroundings. */
+.app-shell--handdrawn .secondary-button,
+.app-shell--handdrawn .secondary-link {
+  border: 3px solid var(--sketch-ink);
+  border-radius: var(--sketch-wobbly-sm);
+  font-family: var(--font-hand-title);
+  /* Pin a shared size: .secondary-button is otherwise 0.92rem while
+     .secondary-link inherits a larger size, so the two read mismatched. */
+  font-size: 1.05rem;
+  font-weight: 700;
+  text-transform: none;
+  box-shadow: var(--sketch-shadow);
+  transition:
+    transform var(--dur-fast) var(--ease),
+    box-shadow var(--dur-fast) var(--ease),
+    background-color var(--dur-fast) var(--ease);
+}
+
+.app-shell--handdrawn .secondary-button {
+  background: var(--sketch-accent);
+  color: var(--sketch-paper);
+}
+
+.app-shell--handdrawn .secondary-link {
+  background: #fff;
+  color: var(--sketch-ink);
+}
+
+.app-shell--handdrawn .secondary-button:hover,
+.app-shell--handdrawn .secondary-link:hover {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 0 var(--sketch-ink);
+}
+
+.app-shell--handdrawn .secondary-button:active,
+.app-shell--handdrawn .secondary-link:active {
+  transform: translate(4px, 4px);
+  box-shadow: 0 0 0 0 var(--sketch-ink);
+}
+
+/* Hero quick links: Practice and the mastery map. */
+.home-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-3);
+  /* A small nudge down from the stat row above. */
+  margin-top: var(--s-2);
+}
+
+.home-hero-actions .secondary-button,
+.home-hero-actions .secondary-link {
+  gap: 8px;
+}
+
+/* Per-lesson "Problem set" link that sits under each open node's label. */
+/* Problem-set node sits under its lesson, offset to the same side (it carries
+   the lesson's --left/--right, so it stays off the spine and clear of the
+   spine-crossing avatar clusters). It is smaller than a lesson node, tucked up
+   closer to its lesson than the normal inter-node gap, and reuses the lesson
+   state classes (--complete / --active / --locked) for its blue/red/gray fill. */
+.path-node--set {
+  margin-top: calc(var(--s-6) * -0.5);
+}
+
+.path-node--set .path-node-btn {
+  width: 52px;
+  height: 52px;
+}
+
+/* Mastery map rows reuse .friend-row; these add the strength bar plus the
+   right-aligned percent and catch/miss counts. */
+.mastery-list {
+  gap: var(--s-4);
+}
+
+.mastery-row-stats {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  text-align: right;
+}
+
+.mastery-percent {
+  font-weight: 720;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.mastery-bar {
+  margin-top: 8px;
+  width: 100%;
+  height: 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-pill);
+  background: var(--paper-sunken);
+  overflow: hidden;
+}
+
+.mastery-bar-fill {
+  display: block;
+  height: 100%;
+  background: var(--success);
+  border-radius: inherit;
+}
+
+.mastery-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-3);
+}
+
+.mastery-empty-text {
+  margin: 0;
+  max-width: none;
+}
+
+.mastery-empty .secondary-button {
+  gap: 8px;
+}
+
+.app-shell--handdrawn .mastery-percent {
+  font-family: var(--font-hand-title);
+  color: var(--sketch-ink);
+}
+
+.app-shell--handdrawn .mastery-bar {
+  border: 3px solid var(--sketch-ink);
+  border-radius: var(--sketch-wobbly-sm);
+  background: #fff;
+}
+
+.app-shell--handdrawn .mastery-bar-fill {
+  background: var(--sketch-secondary);
+}
+
+/* ===========================================================================
+   Problem solve screen layout (Task UI-B)
+   ---------------------------------------------------------------------------
+   A full bleed solve screen: SessionChrome stays on top, a collapsible problem
+   drawer sits on the left, and the rest is the ink workspace with floating,
+   pixel centered controls. Layout only; every surface reuses shared classes
+   (.experience-panel, .feedback-panel, .secondary-button/.secondary-link,
+   .ink-*) and design tokens. Appended last so it wins the cascade over the
+   earlier problem and ink layout. The container rule is scoped to the lesson
+   theme so it overrides .theme-handdrawn--lesson .lesson-player.
+   ======================================================================== */
+
+.theme-handdrawn--lesson .problem-player {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  flex: 1;
+  min-height: 0;
+  gap: 0;
+  /* No padding: the whiteboard canvas fills the whole screen behind the chrome,
+     drawer, and floating controls. */
+  padding: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+/* The remaining viewport height below the chrome. No page scroll: the drawer
+   and the dock scroll their own overflow instead. */
+.problem-stage {
+  /* Shared so the floating controls can position themselves relative to the
+     drawer's open width without coupling to the drawer element itself. */
+  --drawer-w: clamp(320px, 26vw, 360px);
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: stretch;
+  gap: var(--s-4);
+  flex: 1;
+  min-height: 0;
+  /* A transparent overlay that insets the floating drawer and controls from the
+     screen edges. Pointer events pass through to the full screen canvas behind
+     it, except where a control sits. */
+  padding: 0 clamp(16px, 4vw, 24px) var(--s-4);
+  pointer-events: none;
+}
+
+/* --- Collapsible problem drawer --------------------------------------- */
+/* The drawer floats over the full screen canvas instead of taking a flex slot.
+   Collapsing it changes only its own width, so the workspace and every floating
+   control stay put: the student's strokes never appear to move. */
+.problem-drawer {
+  position: absolute;
+  left: clamp(16px, 4vw, 24px);
+  top: 0;
+  bottom: var(--s-4);
+  z-index: 8;
+  width: var(--drawer-w);
+  transition: width var(--dur-slow) var(--ease-out-quint);
+  pointer-events: auto;
+}
+
+.problem-drawer--collapsed {
+  width: 44px;
+}
+
+/* Clips the fixed width panel while the drawer animates so the prompt never
+   reflows mid transition. */
+.problem-drawer-clip {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 28px;
+  box-shadow: var(--sketch-shadow-soft);
+}
+
+.problem-drawer--collapsed .problem-drawer-clip {
+  border: 3px solid var(--sketch-ink);
+  border-radius: var(--sketch-wobbly-sm);
+  background: var(--hd-raised);
+}
+
+.problem-drawer-panel {
+  width: var(--drawer-w);
+  height: 100%;
+  overflow-y: auto;
+  align-content: start;
+  transition: opacity var(--dur) var(--ease);
+}
+
+.problem-drawer--collapsed .problem-drawer-panel {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Toggle handle straddles the drawer's right edge, centered to the pixel. */
+.problem-drawer-toggle {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  transform: translate(50%, -50%);
+  z-index: 6;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  min-height: 0;
+  padding: 0;
+  border: 3px solid var(--sketch-ink);
+  border-radius: 999px;
+  background: var(--sketch-paper);
+  color: var(--sketch-ink);
+  box-shadow: var(--sketch-shadow-soft);
+  cursor: pointer;
+  transition:
+    transform var(--dur-fast) var(--ease),
+    background-color var(--dur-fast) var(--ease);
+}
+
+.problem-drawer-toggle:hover {
+  background: var(--sketch-note);
+}
+
+.problem-drawer-toggle:active {
+  transform: translate(50%, -50%) scale(0.94);
+}
+
+/* --- Workspace and full bleed canvas ---------------------------------- */
+.problem-workspace {
+  position: relative;
+  display: block;
+  flex: 1;
+  min-height: 0;
+  /* A transparent positioning context for the floating controls. The drawing
+     surface is the full screen canvas behind the stage. */
+  background: transparent;
+  pointer-events: none;
+}
+
+.problem-canvas-host {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  /* The full screen whiteboard surface. The canvas draws the grid and strokes
+     over this paper fill; the grid pans and zooms with the view. */
+  background: var(--sketch-paper);
+}
+
+/* Fill the workspace with the canvas and float the canvas built in tool row.
+   Scoped to the host so other ink usage is untouched. InkCanvas owns
+   pen/eraser/undo/clear and sizes itself to this box. */
+.problem-canvas-host .ink-canvas {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  gap: 0;
+}
+
+.problem-canvas-host .ink-stage {
+  position: absolute;
+  inset: 0;
+  min-height: 0;
+  /* Full bleed and square: no box of its own. The host paints the paper and the
+     canvas draws the grid and strokes edge to edge. */
+  border-radius: 0;
+  border: none;
+  background: transparent;
+}
+
+/* The tool cluster sits just right of the drawer and slides with it: anchored
+   past the open drawer, and tracking left to the collapsed tab when the panel
+   closes. The left transition matches the drawer's width animation so the two
+   move together. The offset clears the drawer plus its toggle handle. */
+.problem-toolbar {
+  position: absolute;
+  top: var(--s-4);
+  left: calc(var(--drawer-w) + var(--s-5));
+  z-index: 4;
+  /* A fixed three column grid lays the six tools (pen, eraser, undo, redo,
+     clear, equation sheet) out as a tidy 3 x 2 block. Grid is used instead of
+     flex-wrap so the row count never depends on each button's exact rendered
+     width (their borders make them wider than the 40px content box). */
+  display: grid;
+  grid-template-columns: repeat(3, auto);
+  width: max-content;
+  transition: left var(--dur-slow) var(--ease-out-quint);
+  gap: var(--s-2);
+  padding: var(--s-2);
+  border: 3px solid var(--sketch-ink);
+  border-radius: var(--sketch-wobbly-sm);
+  background: var(--sketch-paper);
+  box-shadow: var(--sketch-shadow-soft);
+  pointer-events: auto;
+}
+
+/* When the panel collapses to its 44px tab, the toolbar follows it left so it
+   keeps hugging the panel's right edge. */
+.problem-toolbar--drawer-collapsed {
+  left: calc(44px + var(--s-5));
+}
+
+/* Every tool in the palette is a uniform 40px square with its icon pixel
+   centered, so all the tools line up on the grid. */
+.problem-toolbar .ink-tool {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+}
+
+/* --- Floating bottom dock: feedback plus actions, pixel centered ------- */
+.problem-dock {
+  position: absolute;
+  left: 50%;
+  bottom: var(--s-5);
+  transform: translateX(-50%);
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-3);
+  width: min(560px, calc(100% - var(--s-7)));
+  /* The track itself never blocks the canvas; only its controls do. */
+  pointer-events: none;
+}
+
+.problem-dock > * {
+  pointer-events: auto;
+}
+
+.problem-feedback {
+  position: relative;
+  width: 100%;
+  max-width: 560px;
+  /* Extra bottom margin lifts the hint/feedback panel a little higher above the
+     bottom-anchored action buttons so it does not crowd them. */
+  margin: 0 0 var(--s-4);
+  max-height: 56vh;
+  overflow-y: auto;
+  box-shadow: var(--sketch-shadow);
+}
+
+/* Small corner control to clear a hint or feedback panel off the canvas.
+   Reuses .session-close for the sketch border + shadow; this only pins it
+   top-right and compacts it to fit the panel corner. */
+.problem-feedback-dismiss {
+  position: absolute;
+  top: var(--s-2);
+  right: var(--s-2);
+  flex: none;
+  width: 32px;
+  height: 32px;
+  min-height: unset;
+  padding: 0;
+}
+
+/* --- Clear-canvas confirmation: a centered scrim + card over the workspace -- */
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: var(--s-4);
+  background: color-mix(in oklab, var(--sketch-ink) 30%, transparent);
+  /* Fade the scrim in as the dialog appears. */
+  animation: fx-fade var(--dur-fast) var(--ease);
+}
+
+.confirm-card {
+  width: min(380px, 100%);
+  display: grid;
+  gap: var(--s-2);
+  padding: var(--s-5);
+  border: 3px solid var(--sketch-ink);
+  border-radius: var(--sketch-wobbly-sm);
+  background: var(--sketch-paper);
+  box-shadow: var(--sketch-shadow-strong);
+  text-align: center;
+  /* Small rise + fade as the dialog appears. */
+  animation: fx-fade-up var(--dur) var(--ease-out-quint);
+}
+
+.confirm-card h3 {
+  margin: 0;
+  font-family: var(--font-hand-title);
+  color: var(--sketch-ink);
+}
+
+.confirm-card p {
+  margin: 0;
+  color: var(--sketch-ink);
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: center;
+  gap: var(--s-3);
+  margin-top: var(--s-3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .confirm-overlay,
+  .confirm-card {
+    animation: none;
+  }
+}
+
+.problem-attempt {
+  margin: 0;
+  padding: var(--s-1) var(--s-3);
+  border: 2px solid var(--sketch-ink);
+  border-radius: 999px;
+  background: var(--sketch-paper);
+  box-shadow: var(--sketch-shadow-soft);
+}
+
+/* The action bar floats centered; reuse the row but give it a paper backing so
+   it reads cleanly over the canvas. */
+.problem-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-3);
+}
+
+/* The chrome floats above the full screen canvas. It passes pointer events
+   through so the student can draw under it; only the close control stays live.
+   It matches the lesson top bar exactly: same content-max width, centering, and
+   horizontal padding (the player itself is full bleed, so the chrome carries
+   these). The vertical padding is inherited from the shared lesson rule. */
+.problem-player .session-chrome {
+  position: relative;
+  z-index: 2;
+  width: min(100%, var(--content-max));
+  margin: 0 auto;
+  padding-left: clamp(16px, 4vw, 24px);
+  padding-right: clamp(16px, 4vw, 24px);
+  pointer-events: none;
+}
+
+.problem-player .session-close {
+  pointer-events: auto;
+}
+
+/* The chrome is click-through so the student can draw on the canvas behind it,
+   but the progress segments are real navigation, so re-enable pointer events on
+   them (like the close button) or jumping between problems does nothing. */
+.problem-player .seg-progress .seg {
+  pointer-events: auto;
+}
+
+/* --- Floating, movable, resizable reference window (equation sheet) ----- */
+/* Fixed to the viewport so it floats over the whole app; the component sets
+   left, top, width, and height inline. Reuses the sketch surface tokens. */
+.floating-window {
+  position: fixed;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  min-width: 280px;
+  min-height: 220px;
+  border: 3px solid var(--sketch-ink);
+  border-radius: var(--sketch-wobbly-sm);
+  background: var(--sketch-paper);
+  box-shadow: var(--sketch-shadow);
+  overflow: hidden;
+}
+
+/* The header doubles as the drag handle. touch-action: none keeps a touch drag
+   from scrolling the page underneath. */
+.floating-window-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2);
+  padding: var(--s-2) var(--s-3);
+  border-bottom: 3px solid var(--sketch-ink);
+  background: var(--sketch-note);
+  cursor: move;
+  touch-action: none;
+  user-select: none;
+}
+
+.floating-window-title {
+  overflow: hidden;
+  font-family: var(--font-hand-title);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--sketch-ink);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  /* Kalam glyphs sit high in their line box, so flex centering leaves the title
+     looking high in the header. Nudge it down to its optical (cap) center. */
+  transform: translateY(0.11em);
+}
+
+/* Compact the shared close button to sit neatly in the header bar. */
+.floating-window-close {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+}
+
+.floating-window-body {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  background: #fff;
+}
+
+/* During an active drag or resize the body (and its PDF iframe) is made click
+   through, so the gesture is never swallowed when the pointer crosses the
+   iframe. The header and resize grip stay live because they sit outside it. */
+.floating-window--interacting .floating-window-body {
+  pointer-events: none;
+}
+
+.floating-window-frame {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+/* --- In-app PDF reader (equation sheet) -------------------------------- */
+/* Renders the PDF as scrollable page canvases so every page is reachable on
+   mobile, where an <iframe> PDF is stuck on page one. The outer box is the
+   positioning context for the floating zoom control and status note; the inner
+   box scrolls. */
+.pdf-viewer {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  background: #525659;
+}
+
+.pdf-viewer-scroll {
+  position: relative;
+  height: 100%;
+  overflow: auto;
+  /* Keep finger scrolling inside the sheet from dragging the page behind it. */
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.pdf-viewer-pages {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-2);
+  /* Grow to the (zoomed) page width so the scroller can pan horizontally when
+     zoomed in, but never shrink below the visible width. */
+  width: fit-content;
+  min-width: 100%;
+  margin-inline: auto;
+}
+
+.pdf-viewer-page {
+  display: block;
+  /* Width is driven by the zoom level (px), set on the pages container in JS. */
+  width: var(--pdf-page-width, 100%);
+  height: auto;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+/* Loading/error message floats over the surface so it never shifts the page
+   layout (which would throw off the jump-to-page scroll). */
+.pdf-viewer-note {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  padding: var(--s-4);
+  text-align: center;
+  color: #f0f0f0;
+  pointer-events: none;
+}
+
+.pdf-viewer-note a {
+  color: #fff;
+  pointer-events: auto;
+}
+
+/* Floating zoom control, pinned to the bottom-right of the window over the
+   sheet so it never scrolls away. */
+.pdf-viewer-zoom {
+  position: absolute;
+  right: var(--s-3);
+  bottom: var(--s-3);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border: 2px solid var(--sketch-ink);
+  border-radius: 999px;
+  background: var(--sketch-paper);
+  box-shadow: var(--sketch-shadow-soft);
+}
+
+.pdf-viewer-zoom button {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  min-height: 0;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--sketch-ink);
+  cursor: pointer;
+}
+
+.pdf-viewer-zoom button:hover {
+  background: var(--sketch-note);
+}
+
+.pdf-viewer-zoom button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.pdf-viewer-zoom-label {
+  min-width: 46px;
+  font-family: var(--font-hand-body);
+  font-size: 0.85rem;
+  color: var(--sketch-ink);
+}
+
+/* Bottom right grip. The diagonal hatch reads as a resize affordance and sits
+   above the iframe so the drag is never swallowed by it. */
+.floating-window-resize {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 20px;
+  height: 20px;
+  cursor: nwse-resize;
+  touch-action: none;
+  background-image: repeating-linear-gradient(
+    -45deg,
+    var(--sketch-ink) 0,
+    var(--sketch-ink) 1.5px,
+    transparent 1.5px,
+    transparent 4px
+  );
+  opacity: 0.55;
+}
+
+@media (max-width: 700px) {
+  .problem-stage {
+    --drawer-w: min(82vw, 340px);
+  }
+
+  /* The open drawer covers most of a phone, so the tools cannot sit beside it.
+     Anchor them clear of the collapsed tab instead; the open drawer (higher
+     z-index) covers them while the student reads, and they reappear in place on
+     collapse without moving. */
+  .problem-toolbar {
+    left: calc(44px + var(--s-5));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .problem-drawer,
+  .problem-drawer-panel,
+  .problem-drawer-toggle,
+  .problem-toolbar {
+    transition: none;
+  }
+}
+
+/* ===========================================================================
+ * Phone-width fixes (<=700px): keep buttons and boxes from overlapping,
+ * overflowing, or getting clipped on small screens. Appended last so these
+ * win the cascade.
+ * ======================================================================== */
+@media (max-width: 700px) {
+  /* The fixed "Return to dashboard" pill sat on top of the page title. On a
+     phone, drop it into the normal flow above the header instead. */
+  .friends-back {
+    position: static;
+    align-self: flex-start;
+  }
+  .friends-page {
+    padding-top: var(--s-4);
+  }
+
+  /* Clear the fixed streak / XP dock so the bottom of the learning path is not
+     hidden underneath it. */
+  .home {
+    padding-bottom: 120px;
+  }
+
+  /* Let multi-button rows wrap instead of overflowing when labels are long. */
+  .confirm-actions,
+  .friend-row,
+  .cl1-build-equation,
+  .cl1-build-slot-row {
+    flex-wrap: wrap;
+  }
+
+  /* Collapse the Gauss lesson's inner card/figure grids to a single column so
+     they are not squished on a phone. */
+  .gauss-shape-row,
+  .gauss-tile-grid,
+  .gauss-match {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ===========================================================================
+ * Ask-the-AI question field
+ * The dock's free-form ask form floats over the dotted whiteboard, so it takes
+ * a solid paper backing to stay readable. Its textarea has no existing rule to
+ * borrow (the auth ".form input" style targets text inputs under ".form", not a
+ * textarea), so it mirrors the lesson answer box (.cl1-numeric-input) using
+ * shared tokens only.
+ * ======================================================================== */
+.problem-ask {
+  background: var(--sketch-paper);
+}
+
+.problem-ask-input {
+  width: 100%;
+  min-width: 0;
+  padding: var(--s-3);
+  font: inherit;
+  border: 2px solid var(--line-strong);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--ink);
+  resize: vertical;
+}
+
+/* The trigger button is inline-flex with no internal gap, so the whitespace
+   between its icon and label collapses and the icon touches "Ask". Add the same
+   small icon-to-text gap the feedback headings use. */
+.problem-ask-trigger {
+  gap: var(--s-1);
 }

@@ -1,0 +1,87 @@
+/* Step 16 - draining a charged conductor to ground. All classes are namespaced
+   cci-16- and reference the shared hand-drawn theme tokens so the metal sphere,
+   ground wire, and electrons sit in the same visual family as the conduction
+   (Step 13) and induction (Step 18) scenes. */
+
+.cci-16-sphere-body {
+  fill: color-mix(in oklab, var(--sketch-muted) 50%, var(--hd-raised));
+  stroke: var(--sketch-ink);
+  stroke-width: 2.5;
+}
+
+/* Cool overlay marking the sphere's net-negative excess. Opacity is driven from
+   the component and fades to nothing as the electrons drain away. */
+.cci-16-sphere-neg {
+  fill: color-mix(in oklab, var(--sketch-secondary) 32%, var(--hd-raised));
+  stroke: none;
+  pointer-events: none;
+}
+
+/* A dashed ring marks the finished, neutral result. */
+.cci-16-result-ring {
+  fill: none;
+  stroke: color-mix(in oklab, var(--sketch-ink) 55%, transparent);
+  stroke-width: 2;
+  stroke-dasharray: 4 6;
+  opacity: 0.8;
+}
+
+/* Electrons reuse the shared .cl1-electron blue; bump the stroke a touch so the
+   dots stay crisp against the tinted sphere. */
+.cci-16-electron {
+  stroke-width: 2;
+}
+
+/* Electrons mid-flight to earth get a soft glow so the flow reads clearly. */
+.cci-16-electron-draining {
+  filter: drop-shadow(0 0 3px color-mix(in oklab, var(--sketch-secondary) 65%, transparent));
+}
+
+.cci-16-wire {
+  fill: none;
+  stroke: var(--sketch-ink);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* The switch lever that bridges the wire when the learner connects to ground. */
+.cci-16-switch {
+  stroke: var(--sketch-ink);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.cci-16-switch-contact {
+  fill: var(--sketch-ink);
+}
+
+.cci-16-ground line {
+  stroke: var(--sketch-ink);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.cci-16-label {
+  fill: color-mix(in oklab, var(--sketch-ink) 70%, transparent);
+  font-family: var(--font-hand-body);
+  font-size: 13px;
+  text-anchor: middle;
+}
+
+.cci-16-status {
+  font-family: var(--font-hand-title);
+  font-weight: 700;
+  font-size: 15px;
+  text-anchor: middle;
+  fill: color-mix(in oklab, var(--sketch-ink) 80%, transparent);
+}
+
+.cci-16-status--neg {
+  fill: var(--sketch-secondary);
+}
+
+/* The button is a shared secondary-button; left-align it under the figure. */
+.cci-16-connect {
+  justify-self: start;
+}

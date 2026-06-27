@@ -12,7 +12,16 @@
 
 export type CourseLesson = {
   title: string;
+  // Stable identifier for the teachable skill this node represents. The live
+  // lesson reuses its lessonId; every other node uses a kebab-case slug of its
+  // title. Problems reference these ids through their skillIds.
+  skillId: string;
   lessonId?: string;
+  // Fixed problem-set size for a special capstone set (e.g. the final AP exam
+  // review). When set, the dashboard shows this count on the problem-set node
+  // instead of the generic label. Normal lessons leave it unset and let the
+  // composer size their post-lesson set.
+  problemSetSize?: number;
 };
 
 export type CourseUnit = {
@@ -30,13 +39,19 @@ export const COURSE_UNITS: CourseUnit[] = [
     name: "Electric Charges, Fields & Gauss's Law",
     topic: 'Charges & fields',
     lessons: [
-      { title: "Coulomb's Law", lessonId: 'coulombs-law' },
-      { title: 'Superposition of Electric Forces' },
-      { title: 'Charging, Conductors & Insulators' },
-      { title: 'Electric Field & Field Lines' },
-      { title: 'Electric Fields of Charge Distributions' },
-      { title: 'Electric Flux' },
-      { title: "Gauss's Law" },
+      { title: "Coulomb's Law", skillId: 'coulombs-law', lessonId: 'coulombs-law' },
+      {
+        title: 'Charging, Conductors & Insulators',
+        skillId: 'charging-conductors-insulators',
+        lessonId: 'charging-conductors-insulators',
+      },
+      { title: 'Electric Field & Field Lines', skillId: 'electric-field-field-lines' },
+      {
+        title: 'Electric Fields of Charge Distributions',
+        skillId: 'electric-fields-of-charge-distributions',
+      },
+      { title: 'Electric Flux', skillId: 'electric-flux' },
+      { title: "Gauss's Law", skillId: 'gausss-law' },
     ],
   },
   {
@@ -44,10 +59,10 @@ export const COURSE_UNITS: CourseUnit[] = [
     name: 'Electric Potential',
     topic: 'Energy & potential',
     lessons: [
-      { title: 'Electric Potential Energy' },
-      { title: 'Electric Potential' },
-      { title: 'Potential & Field Relationship' },
-      { title: 'Conservation of Electric Energy' },
+      { title: 'Electric Potential Energy', skillId: 'electric-potential-energy' },
+      { title: 'Electric Potential', skillId: 'electric-potential' },
+      { title: 'Potential & Field Relationship', skillId: 'potential-field-relationship' },
+      { title: 'Conservation of Electric Energy', skillId: 'conservation-of-electric-energy' },
     ],
   },
   {
@@ -55,11 +70,11 @@ export const COURSE_UNITS: CourseUnit[] = [
     name: 'Conductors & Capacitors',
     topic: 'Conductors & capacitance',
     lessons: [
-      { title: 'Electrostatics with Conductors' },
-      { title: 'Redistribution of Charge' },
-      { title: 'Capacitors & Capacitance' },
-      { title: 'Capacitor Combinations' },
-      { title: 'Dielectrics' },
+      { title: 'Electrostatics with Conductors', skillId: 'electrostatics-with-conductors' },
+      { title: 'Redistribution of Charge', skillId: 'redistribution-of-charge' },
+      { title: 'Capacitors & Capacitance', skillId: 'capacitors-capacitance' },
+      { title: 'Capacitor Combinations', skillId: 'capacitor-combinations' },
+      { title: 'Dielectrics', skillId: 'dielectrics' },
     ],
   },
   {
@@ -67,14 +82,13 @@ export const COURSE_UNITS: CourseUnit[] = [
     name: 'Electric Circuits',
     topic: 'DC circuits',
     lessons: [
-      { title: 'Electric Current' },
-      { title: 'Simple Circuits' },
-      { title: "Resistance, Resistivity & Ohm's Law" },
-      { title: 'Electric Power' },
-      { title: 'Compound DC Circuits' },
-      { title: "Kirchhoff's Loop Rule" },
-      { title: "Kirchhoff's Junction Rule" },
-      { title: 'RC Circuits' },
+      { title: 'Electric Current', skillId: 'electric-current' },
+      { title: 'Simple Circuits', skillId: 'simple-circuits' },
+      { title: "Resistance, Resistivity & Ohm's Law", skillId: 'resistance-resistivity-ohms-law' },
+      { title: 'Electric Power', skillId: 'electric-power' },
+      { title: 'Compound DC Circuits', skillId: 'compound-dc-circuits' },
+      { title: "Kirchhoff's Rules", skillId: 'kirchhoffs-rules' },
+      { title: 'RC Circuits', skillId: 'rc-circuits' },
     ],
   },
   {
@@ -82,11 +96,10 @@ export const COURSE_UNITS: CourseUnit[] = [
     name: 'Magnetic Fields & Electromagnetism',
     topic: 'Magnetism',
     lessons: [
-      { title: 'Magnetic Fields' },
-      { title: 'Magnetic Force on Moving Charges' },
-      { title: 'Magnetic Force on Currents' },
-      { title: 'Biot–Savart Law' },
-      { title: "Ampère's Law" },
+      { title: 'Magnetic Fields', skillId: 'magnetic-fields' },
+      { title: 'Magnetic Force on Charges & Currents', skillId: 'magnetic-force-on-charges-currents' },
+      { title: 'Biot-Savart Law', skillId: 'biot-savart-law' },
+      { title: "Ampère's Law", skillId: 'amperes-law' },
     ],
   },
   {
@@ -94,27 +107,69 @@ export const COURSE_UNITS: CourseUnit[] = [
     name: 'Electromagnetic Induction',
     topic: 'Induction',
     lessons: [
-      { title: 'Magnetic Flux' },
-      { title: "Faraday's & Lenz's Laws" },
-      { title: 'Induced Currents & Motional EMF' },
-      { title: 'Inductance' },
-      { title: 'LR Circuits' },
-      { title: 'LC Circuits' },
+      { title: 'Magnetic Flux', skillId: 'magnetic-flux' },
+      { title: "Faraday's & Lenz's Laws", skillId: 'faradays-lenzs-laws' },
+      { title: 'Induced Currents & Motional EMF', skillId: 'induced-currents-motional-emf' },
+      { title: 'Inductance', skillId: 'inductance' },
+      { title: 'LR & LC Circuits', skillId: 'lr-lc-circuits' },
     ],
+  },
+  {
+    id: 'final-review',
+    name: 'Final Review',
+    topic: 'Exam prep',
+    lessons: [{ title: 'The AP Exam', skillId: 'the-ap-exam', problemSetSize: 50 }],
   },
 ];
 
 export const COURSE_LESSON_TOTAL = COURSE_UNITS.reduce((total, unit) => total + unit.lessons.length, 0);
 
-// All lessons flattened in course (teaching) order. The index of a lesson here
-// is the timeline "position": a learner who has completed N lessons sits on the
-// node at index N (their first not-yet-completed lesson).
+// All lessons flattened in course (teaching) order. The path alternates lesson
+// then problem set throughout, so a learner's timeline "position" is two numbers:
+// how many lessons they have completed and how many of those lessons' problem
+// sets they have finished. They sit on the first not-yet-finished node, which is
+// the problem set of their last completed lesson when its set is still open, and
+// otherwise the next lesson.
 export const COURSE_LESSONS_FLAT: CourseLesson[] = COURSE_UNITS.flatMap((unit) => unit.lessons);
 
-/** Human-readable label for the lesson a learner with `completedCount` is on. */
-export function lessonLabelAtIndex(completedCount: number): string {
-  if (completedCount >= COURSE_LESSONS_FLAT.length) {
+/** A learner's position on the path: a lesson node, a problem-set node, or the end. */
+export type FriendNode =
+  | { kind: 'lesson'; index: number }
+  | { kind: 'pset'; index: number }
+  | { kind: 'end' };
+
+/**
+ * Resolves where a learner sits given how many lessons and problem sets they have
+ * completed. With more lessons done than sets, they are on the problem set of
+ * their last completed lesson; otherwise they are on the next lesson (or the end
+ * once everything is done). Inputs are clamped so out-of-range/legacy values are
+ * safe (`psets` can never exceed `lessons`).
+ */
+export function friendNode(completedCount: number, completedPsetCount: number): FriendNode {
+  const total = COURSE_LESSONS_FLAT.length;
+  const lessons = Math.min(Math.max(0, Math.trunc(completedCount)), total);
+  const psets = Math.min(Math.max(0, Math.trunc(completedPsetCount)), lessons);
+  if (lessons >= total && psets >= total) {
+    return { kind: 'end' };
+  }
+  if (psets < lessons) {
+    return { kind: 'pset', index: psets };
+  }
+  return { kind: 'lesson', index: lessons };
+}
+
+/** Node id for friend-overlay placement: "lesson:N", "pset:N", or "end". */
+export function friendNodeKey(completedCount: number, completedPsetCount: number): string {
+  const node = friendNode(completedCount, completedPsetCount);
+  return node.kind === 'end' ? 'end' : `${node.kind}:${node.index}`;
+}
+
+/** Human-readable label for the node a learner is currently on. */
+export function friendPositionLabel(completedCount: number, completedPsetCount: number): string {
+  const node = friendNode(completedCount, completedPsetCount);
+  if (node.kind === 'end') {
     return 'Finished the course';
   }
-  return COURSE_LESSONS_FLAT[Math.max(0, completedCount)]?.title ?? 'Just getting started';
+  const title = COURSE_LESSONS_FLAT[node.index]?.title ?? 'Just getting started';
+  return node.kind === 'pset' ? `${title} \u00b7 Problem Set` : title;
 }

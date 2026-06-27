@@ -1,0 +1,65 @@
+/* Step 13 - charging by conduction (touch transfer). All classes are namespaced
+   cci-13- and reference the shared hand-drawn theme tokens so the metal sphere,
+   negative rod, and electrons sit in the same visual family as the Coulomb and
+   induction scenes. */
+
+.cci-13-sphere-body {
+  fill: color-mix(in oklab, var(--sketch-muted) 50%, var(--hd-raised));
+  stroke: var(--sketch-ink);
+  stroke-width: 2.5;
+}
+
+/* Cool overlay that fades in as the sphere gains electrons and turns net
+   negative. Opacity is driven from the component. */
+.cci-13-sphere-neg {
+  fill: color-mix(in oklab, var(--sketch-secondary) 32%, var(--hd-raised));
+  stroke: none;
+  pointer-events: none;
+}
+
+/* A dashed ring marks the finished, negatively charged result. */
+.cci-13-result-ring {
+  fill: none;
+  stroke: var(--sketch-secondary);
+  stroke-width: 2;
+  stroke-dasharray: 4 6;
+  opacity: 0.85;
+}
+
+/* Electrons reuse the shared .cl1-electron blue; bump the stroke a touch so the
+   dots stay crisp against the tinted sphere. */
+.cci-13-electron {
+  stroke-width: 2;
+}
+
+/* The charged rod (negative): a hand-drawn capsule in the cool secondary hue,
+   matching the induction scene's rod. */
+.cci-13-rod {
+  fill: color-mix(in oklab, var(--sketch-secondary) 24%, var(--hd-raised));
+  stroke: var(--sketch-ink);
+  stroke-width: 2.5;
+}
+
+.cci-13-rod-label {
+  fill: color-mix(in oklab, var(--sketch-ink) 70%, transparent);
+  font-family: var(--font-hand-body);
+  font-size: 13px;
+  text-anchor: middle;
+}
+
+.cci-13-status {
+  font-family: var(--font-hand-title);
+  font-weight: 700;
+  font-size: 15px;
+  text-anchor: middle;
+  fill: color-mix(in oklab, var(--sketch-ink) 80%, transparent);
+}
+
+.cci-13-status--neg {
+  fill: var(--sketch-secondary);
+}
+
+/* The button is a shared secondary-button; left-align it under the figure. */
+.cci-13-touch {
+  justify-self: start;
+}

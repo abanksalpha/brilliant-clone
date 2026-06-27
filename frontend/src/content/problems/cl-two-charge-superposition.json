@@ -1,0 +1,21 @@
+{
+  "problemId": "cl-two-charge-superposition",
+  "lessonId": "electric-fields-of-charge-distributions",
+  "unitId": "electrostatics",
+  "skillIds": ["electric-fields-of-charge-distributions"],
+  "principleIds": ["superposition", "field-concept"],
+  "misconceptionTags": ["superposition-magnitude-add"],
+  "kind": "single",
+  "difficulty": 3,
+  "difficultyBand": 3,
+  "difficultyFeatures": {
+    "steps": 4,
+    "symbolic": false,
+    "calculus": false,
+    "multiPart": false,
+    "hasTrap": true
+  },
+  "provenance": "authored",
+  "title": "Net field at the midpoint",
+  "prompt": "Two +4.0 microcoulomb charges sit 0.60 m apart. Find the magnitude of the net electric field at the midpoint between them."
+}

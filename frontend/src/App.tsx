@@ -3,10 +3,14 @@ import { ProtectedRoute } from './auth/ProtectedRoute';
 import { ProgressProvider } from './progress/ProgressContext';
 import { SocialProvider } from './social/SocialContext';
 import { DashboardPage } from './pages/DashboardPage';
+import { DevSceneGalleryPage } from './pages/DevSceneGalleryPage';
 import { FriendsPage } from './pages/FriendsPage';
 import { LandingPage } from './pages/LandingPage';
 import { LessonPage } from './pages/LessonPage';
 import { LoginPage } from './pages/LoginPage';
+import { MasteryPage } from './pages/MasteryPage';
+import { PracticePage } from './pages/PracticePage';
+import { ProblemSetPage } from './pages/ProblemSetPage';
 import { SignupPage } from './pages/SignupPage';
 import { VerifyEmailPage } from './pages/VerifyEmailPage';
 
@@ -43,6 +47,33 @@ export function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/problem-set/:lessonId"
+            element={
+              <ProtectedRoute>
+                <ProblemSetPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/practice"
+            element={
+              <ProtectedRoute>
+                <PracticePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/mastery"
+            element={
+              <ProtectedRoute>
+                <MasteryPage />
+              </ProtectedRoute>
+            }
+          />
+          {import.meta.env.DEV ? (
+            <Route path="/dev/charging/:step" element={<DevSceneGalleryPage />} />
+          ) : null}
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </SocialProvider>

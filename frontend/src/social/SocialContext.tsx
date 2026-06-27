@@ -10,6 +10,7 @@ import {
 import { useAuth } from '../auth/AuthContext';
 import { useProgress } from '../progress/ProgressContext';
 import { LIVE_LESSON_IDS } from '../progress/dashboardProgress';
+import { countCompletedProblemSets } from '../progress/problemSetStatus';
 import {
   acceptFriendRequest,
   partitionFriendships,
@@ -80,6 +81,7 @@ export function SocialProvider({ children }: { children: ReactNode }) {
   const photoURL = currentUser?.photoURL ?? null;
 
   const completedCount = progress.completedLessonIds.length;
+  const completedPsetCount = countCompletedProblemSets(progress);
   const currentLessonId = LIVE_LESSON_IDS[completedCount] ?? null;
 
   const [friendships, setFriendships] = useState<Friendship[]>([]);
@@ -93,9 +95,9 @@ export function SocialProvider({ children }: { children: ReactNode }) {
     void upsertProfile(
       userId,
       { displayName: deriveDisplayName(displayName, email), email: email ?? '', photoURL },
-      { completedCount, currentLessonId },
+      { completedCount, completedPsetCount, currentLessonId },
     ).catch((error) => console.error('Failed to sync profile', error));
-  }, [userId, displayName, email, photoURL, completedCount, currentLessonId]);
+  }, [userId, displayName, email, photoURL, completedCount, completedPsetCount, currentLessonId]);
 
   // Subscribe to friendships (accepted + pending) the user participates in.
   useEffect(() => {

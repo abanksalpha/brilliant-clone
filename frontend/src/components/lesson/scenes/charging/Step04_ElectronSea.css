@@ -1,0 +1,25 @@
+/* Step 4 - the sea of free electrons. A metal piece tinted cool/metallic like
+   the conductor slab in Step 3, holding a fixed lattice of positive cores and a
+   shared cloud of free electrons. */
+
+.cci-04-metal {
+  fill: color-mix(in oklab, var(--sketch-secondary) 16%, var(--hd-raised));
+  stroke: var(--sketch-ink);
+  stroke-width: 2.5;
+}
+
+/* Free electrons reuse the shared cl1-electron blue; a soft glow makes the
+   loose cloud read as a lively sea rather than flat dots. */
+.cci-04-electron {
+  stroke-width: 1.5;
+  filter: drop-shadow(0 0 2px color-mix(in oklab, var(--sketch-secondary) 45%, transparent));
+}
+
+/* Faint streaks behind a few electrons hint at drift without implying a force. */
+.cci-04-trail {
+  fill: none;
+  stroke: var(--sketch-secondary);
+  stroke-width: 3;
+  stroke-linecap: round;
+  opacity: 0.26;
+}

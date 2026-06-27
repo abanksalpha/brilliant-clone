@@ -1,0 +1,40 @@
+.cci-03-slab {
+  stroke: var(--sketch-ink);
+  stroke-width: 2.5;
+}
+
+/* Metal reads cool and metallic; plastic reads warm. Both tint the paper so
+   they sit in the same hand-drawn family as the Coulomb scenes. */
+.cci-03-slab--metal {
+  fill: color-mix(in oklab, var(--sketch-secondary) 16%, var(--hd-raised));
+}
+
+.cci-03-slab--plastic {
+  fill: color-mix(in oklab, var(--sketch-accent) 13%, var(--hd-raised));
+}
+
+.cci-03-electron {
+  stroke-width: 1.5;
+}
+
+/* A soft glow only while the free electrons are actually sliding. */
+.cci-03-electron--drifting {
+  filter: drop-shadow(0 0 3px color-mix(in oklab, var(--sketch-secondary) 60%, transparent));
+}
+
+.cci-03-label {
+  fill: var(--sketch-ink);
+  font-family: var(--font-hand-title);
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.cci-03-sublabel {
+  fill: color-mix(in oklab, var(--sketch-ink) 62%, var(--hd-raised));
+  font-family: var(--font-hand-body);
+  font-size: 13px;
+}
+
+.cci-03-nudge {
+  justify-self: start;
+}

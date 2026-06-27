@@ -1,0 +1,81 @@
+/* Step 20 - "Order the induction steps" supporting figure. A static reference of
+   the induction apparatus (charged rod, neutral metal sphere, wire to ground).
+   The ordering happens in the rail; this figure only names the pieces, so it
+   stays neutral and shows no sequence. All classes are namespaced cci-20- and
+   reference the shared hand-drawn theme tokens for visual parity with Step 18. */
+
+.cci-20-sphere-body {
+  fill: color-mix(in oklab, var(--sketch-muted) 50%, var(--hd-raised));
+  stroke: var(--sketch-ink);
+  stroke-width: 2.5;
+}
+
+.cci-20-dot {
+  stroke-width: 2;
+}
+
+.cci-20-sign {
+  fill: oklch(24% 0.025 72);
+  font-weight: 760;
+  font-size: 11px;
+  text-anchor: middle;
+  dominant-baseline: central;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* The charged rod (negative): a hand-drawn capsule in the cool secondary hue. */
+.cci-20-rod {
+  fill: color-mix(in oklab, var(--sketch-secondary) 24%, var(--hd-raised));
+  stroke: var(--sketch-ink);
+  stroke-width: 2.5;
+}
+
+.cci-20-rod-sign {
+  fill: var(--sketch-secondary);
+  font-weight: 800;
+  font-size: 16px;
+  text-anchor: middle;
+  dominant-baseline: central;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.cci-20-rod-label {
+  fill: color-mix(in oklab, var(--sketch-ink) 70%, transparent);
+  font-family: var(--font-hand-body);
+  font-size: 13px;
+  text-anchor: middle;
+}
+
+.cci-20-wire {
+  fill: none;
+  stroke: var(--sketch-ink);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.cci-20-ground line {
+  stroke: var(--sketch-ink);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.cci-20-label {
+  fill: color-mix(in oklab, var(--sketch-ink) 70%, transparent);
+  font-family: var(--font-hand-body);
+  font-size: 13px;
+  text-anchor: middle;
+}
+
+/* The sphere's own title sits a touch bolder than the part labels. */
+.cci-20-title {
+  fill: color-mix(in oklab, var(--sketch-ink) 82%, transparent);
+  font-family: var(--font-hand-title);
+  font-weight: 700;
+  font-size: 14px;
+  text-anchor: middle;
+}

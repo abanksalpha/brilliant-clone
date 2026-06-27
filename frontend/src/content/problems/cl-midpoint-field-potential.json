@@ -1,0 +1,21 @@
+{
+  "problemId": "cl-midpoint-field-potential",
+  "lessonId": "electric-fields-of-charge-distributions",
+  "unitId": "electrostatics",
+  "skillIds": ["electric-fields-of-charge-distributions"],
+  "principleIds": ["field-concept", "energy-potential"],
+  "misconceptionTags": ["field-potential-conflation"],
+  "kind": "single",
+  "difficulty": 4,
+  "difficultyBand": 4,
+  "difficultyFeatures": {
+    "steps": 5,
+    "symbolic": false,
+    "calculus": false,
+    "multiPart": true,
+    "hasTrap": true
+  },
+  "provenance": "authored",
+  "title": "Field at the midpoint of a dipole",
+  "prompt": "A +5.0 microcoulomb charge and a -5.0 microcoulomb charge are 0.40 m apart. Find the magnitude of the electric field at the exact midpoint between them."
+}

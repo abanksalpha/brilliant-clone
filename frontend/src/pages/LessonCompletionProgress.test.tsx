@@ -202,6 +202,27 @@ describe('Lesson completion progress wiring', () => {
     expect(screen.getByTestId('mock-visited-step-count')).toHaveTextContent('3');
   });
 
+  it('resumes a completed lesson on the page last seen instead of resetting to the start', () => {
+    const lessonView = renderLesson();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Advance mocked step' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Advance mocked step' }));
+    expect(screen.getByTestId('mock-step-index')).toHaveTextContent('2');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Finish mocked lesson' }));
+    expect(cloud.get('user-progress').progress.completedLessonIds).toEqual(['coulombs-law']);
+    expect(cloud.get('user-progress').lessonSessions['coulombs-law']).toEqual({
+      stepIndex: 2,
+      maxVisitedStepIndex: 2,
+    });
+
+    lessonView.unmount();
+
+    renderLesson();
+
+    expect(screen.getByTestId('mock-step-index')).toHaveTextContent('2');
+  });
+
   it('persists visited screens even after navigating back and reopening the lesson', () => {
     const lessonView = renderLesson();
 
@@ -219,7 +240,7 @@ describe('Lesson completion progress wiring', () => {
     expect(screen.getByTestId('mock-visited-step-count')).toHaveTextContent('3');
   });
 
-  it('isolates lesson session persistence by account and clears it on completion', () => {
+  it('isolates lesson session persistence by account and keeps it after completion', () => {
     authState.currentUser = {
       uid: 'user-progress',
       email: 'progress@example.com',
@@ -243,7 +264,9 @@ describe('Lesson completion progress wiring', () => {
     expect(screen.getByTestId('mock-visited-step-count')).toHaveTextContent('1');
     fireEvent.click(screen.getByRole('button', { name: 'Advance mocked step' }));
     fireEvent.click(screen.getByRole('button', { name: 'Finish mocked lesson' }));
-    expect(cloud.get('user-second').lessonSessions).toEqual({});
+    expect(cloud.get('user-second').lessonSessions).toEqual({
+      'coulombs-law': { stepIndex: 1, maxVisitedStepIndex: 1 },
+    });
     secondAccount.unmount();
 
     authState.currentUser = {

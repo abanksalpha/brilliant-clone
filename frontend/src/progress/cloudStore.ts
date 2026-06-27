@@ -6,20 +6,28 @@ import {
   normalizeLessonSessions,
   type LessonSessionState,
 } from './lessonSessionProgress';
+import {
+  EMPTY_PROBLEM_SESSION_STATE,
+  normalizeProblemSessions,
+  type ProblemSessionState,
+} from './problemSessionProgress';
 
 /**
  * The complete cloud-backed state for a single learner. Persisted as one
- * Firestore document at `users/{uid}` so progress, XP, streak, and in-lesson
- * position follow the account across devices and sessions.
+ * Firestore document at `users/{uid}` so progress, XP, streak, in-lesson
+ * position, and in-progress problem set work follow the account across devices
+ * and sessions.
  */
 export type UserCloudState = {
   progress: DashboardProgress;
   lessonSessions: LessonSessionState;
+  problemSessions: ProblemSessionState;
 };
 
 export const EMPTY_CLOUD_STATE: UserCloudState = {
   progress: EMPTY_PROGRESS,
   lessonSessions: EMPTY_SESSION_STATE,
+  problemSessions: EMPTY_PROBLEM_SESSION_STATE,
 };
 
 const USERS_COLLECTION = 'users';
@@ -36,11 +44,12 @@ function toCloudState(raw: unknown): UserCloudState {
   return {
     progress: normalizeProgress(data),
     lessonSessions: normalizeLessonSessions(data.lessonSessions),
+    problemSessions: normalizeProblemSessions(data.problemSessions),
   };
 }
 
 /** Serializes in-memory state into the exact Firestore document shape. */
-function toDocument(state: UserCloudState): Record<string, unknown> {
+export function toDocument(state: UserCloudState): Record<string, unknown> {
   return {
     completedLessonIds: state.progress.completedLessonIds,
     completionDates: state.progress.completionDates,
@@ -48,7 +57,11 @@ function toDocument(state: UserCloudState): Record<string, unknown> {
     answeredQuestionIds: state.progress.answeredQuestionIds,
     questionXp: state.progress.questionXp,
     dailyXp: state.progress.dailyXp,
+    misconceptions: state.progress.misconceptions,
+    problemAttempts: state.progress.problemAttempts,
+    misconceptionGraph: state.progress.misconceptionGraph,
     lessonSessions: state.lessonSessions,
+    problemSessions: state.problemSessions,
   };
 }
 

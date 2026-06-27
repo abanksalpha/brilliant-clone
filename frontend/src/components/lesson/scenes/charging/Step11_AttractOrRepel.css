@@ -1,0 +1,91 @@
+/* Step 11 (multiple-choice) - a static supporting figure. The rail shows the
+   choices (attracted / repelled / nothing); this scene just poses the setup: a
+   charged rod, sign unspecified, held near a neutral metal can, with a question
+   mark hovering over the can. Colours come from the shared sketch tokens so the
+   rod and metal match the polarization steps exactly. */
+
+.cci-11-can {
+  fill: color-mix(in oklab, var(--sketch-muted) 42%, var(--hd-raised));
+  stroke: var(--sketch-ink);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+}
+
+.cci-11-can-lid {
+  fill: color-mix(in oklab, var(--sketch-paper) 60%, var(--sketch-muted));
+  stroke: var(--sketch-ink);
+  stroke-width: 2.5;
+}
+
+.cci-11-can-sheen {
+  stroke: color-mix(in oklab, var(--sketch-paper) 75%, white);
+  stroke-width: 5;
+  stroke-linecap: round;
+  opacity: 0.6;
+}
+
+.cci-11-can-sheen--faint {
+  stroke-width: 2.5;
+  opacity: 0.4;
+}
+
+/* Balanced plus and minus inside the can: equal counts, evenly mixed, never
+   separated, so the can reads as neutral overall and gives nothing away. */
+.cci-11-neutral-marks {
+  opacity: 0.5;
+}
+
+.cci-11-plus-mark {
+  fill: var(--sketch-accent);
+  font-family: var(--font-hand-title);
+  font-weight: 800;
+  font-size: 15px;
+}
+
+.cci-11-electron {
+  fill: var(--sketch-secondary);
+  stroke: var(--sketch-ink);
+  stroke-width: 1.5;
+}
+
+.cci-11-rod {
+  fill: color-mix(in oklab, var(--sketch-secondary) 58%, var(--sketch-paper));
+  stroke: var(--sketch-ink);
+  stroke-width: 2.5;
+}
+
+.cci-11-rod-sign {
+  fill: var(--sketch-paper);
+  font-family: var(--font-hand-title);
+  font-weight: 800;
+  font-size: 20px;
+}
+
+.cci-11-caption {
+  fill: color-mix(in oklab, var(--sketch-ink) 72%, var(--sketch-paper));
+  font-family: var(--font-hand-body);
+  font-size: 14px;
+}
+
+/* The big question mark over the can: the heart of the figure. */
+.cci-11-question {
+  fill: var(--sketch-accent);
+  font-family: var(--font-hand-title);
+  font-weight: 800;
+  font-size: 44px;
+}
+
+/* A faint dashed double-headed arrow under the question mark: the can could move
+   either way (toward the rod or away), which is exactly what is being asked. */
+.cci-11-maybe-line {
+  stroke: color-mix(in oklab, var(--sketch-ink) 60%, var(--sketch-paper));
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-dasharray: 4 3;
+  opacity: 0.75;
+}
+
+.cci-11-maybe-head {
+  fill: color-mix(in oklab, var(--sketch-ink) 60%, var(--sketch-paper));
+  opacity: 0.75;
+}

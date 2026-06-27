@@ -1,0 +1,55 @@
+/* Step 24 - excess charge spreads to the outer surface. All classes are
+   namespaced cci-24- and reference the shared hand-drawn theme tokens so the
+   conductor body and electrons sit in the same visual family as the Coulomb,
+   conduction, and induction scenes. */
+
+.cci-24-body {
+  fill: color-mix(in oklab, var(--sketch-muted) 50%, var(--hd-raised));
+  stroke: var(--sketch-ink);
+  stroke-width: 2.5;
+}
+
+/* Soft inner shading gives the metal a little volume. */
+.cci-24-inner {
+  fill: color-mix(in oklab, var(--sketch-muted) 22%, var(--hd-raised));
+  stroke: none;
+  pointer-events: none;
+}
+
+/* A dashed accent ring traces the outer surface once the charge has settled
+   there. Its opacity is driven from the component as the electrons arrive. */
+.cci-24-surface-ring {
+  fill: none;
+  stroke: var(--sketch-secondary);
+  stroke-width: 2;
+  stroke-dasharray: 4 6;
+  pointer-events: none;
+}
+
+/* Excess electrons reuse the shared .cl1-electron blue; bump the stroke a touch
+   so the dots stay crisp against the tinted conductor. */
+.cci-24-electron {
+  stroke-width: 2;
+}
+
+/* Electrons in flight get a soft glow so the outward push reads clearly. */
+.cci-24-electron--moving {
+  filter: drop-shadow(0 0 3px color-mix(in oklab, var(--sketch-secondary) 65%, transparent));
+}
+
+.cci-24-status {
+  font-family: var(--font-hand-title);
+  font-weight: 700;
+  font-size: 15px;
+  text-anchor: middle;
+  fill: color-mix(in oklab, var(--sketch-ink) 80%, transparent);
+}
+
+.cci-24-status--settled {
+  fill: var(--sketch-secondary);
+}
+
+/* The button is a shared secondary-button; left-align it under the figure. */
+.cci-24-add {
+  justify-self: start;
+}

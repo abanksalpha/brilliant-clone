@@ -1,6 +1,7 @@
 import { initializeApp, type FirebaseApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, type Auth } from 'firebase/auth';
 import { getFirestore, type Firestore } from 'firebase/firestore';
+import { getFunctions, connectFunctionsEmulator, type Functions } from 'firebase/functions';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -25,3 +26,13 @@ export const googleProvider = new GoogleAuthProvider();
 // persists across devices and sessions. Uses the default in-memory cache (no
 // durable local persistence) so nothing learner-specific is stored on-device.
 export const db: Firestore | null = app ? getFirestore(app) : null;
+
+// Callable Cloud Functions (gradeAttempt, getHint). Null when Firebase is not
+// configured so callers can fail loudly rather than silently degrade.
+export const functions: Functions | null = app ? getFunctions(app) : null;
+
+// Opt-in local emulator wiring, controlled by an env flag so production never
+// points at 127.0.0.1.
+if (functions && import.meta.env.VITE_USE_FUNCTIONS_EMULATOR === 'true') {
+  connectFunctionsEmulator(functions, '127.0.0.1', 5001);
+}
