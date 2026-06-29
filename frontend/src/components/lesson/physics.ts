@@ -2,8 +2,6 @@
 // interactions. Keeping these here (and unit-tested) means the sandbox, numeric
 // checks, and force arrows all agree with the same ground truth.
 
-export const COULOMB_K = 8.99e9;
-
 export type Vec2 = { x: number; y: number };
 
 export type PointCharge = {
@@ -68,4 +66,63 @@ export function angleDegrees(vector: Vec2): number {
 export function angleDifferenceDegrees(a: number, b: number): number {
   const diff = Math.abs(((a - b) % 360) + 360) % 360;
   return diff > 180 ? 360 - diff : diff;
+}
+
+export type ForcePair = { onLeft: Vec2; onRight: Vec2 };
+
+// Collapse a signed zero to +0 so a zero force reads as { x: 0, y: 0 } rather
+// than { x: -0, y: 0 } (forceOnCharge multiplies a zero magnitude by a unit
+// direction, which can keep the direction's sign on the zero).
+function normalizeZero(vector: Vec2): Vec2 {
+  return { x: vector.x === 0 ? 0 : vector.x, y: vector.y === 0 ? 0 : vector.y };
+}
+
+/** Equal-and-opposite Coulomb forces on a pair of point charges (k = 1 scene units). */
+export function forceVectorsForPair(left: PointCharge, right: PointCharge, k = 1): ForcePair {
+  return {
+    onLeft: normalizeZero(forceOnCharge(left, right, k)),
+    onRight: normalizeZero(forceOnCharge(right, left, k)),
+  };
+}
+
+/** Map a force magnitude to an on-screen arrow length in pixels at a fixed scale. */
+export function scaleForceToPixels(forceMagnitude: number, pxPerUnit: number, maxPx: number): number {
+  if (!Number.isFinite(forceMagnitude) || forceMagnitude <= 0) return 0;
+  return Math.min(forceMagnitude * pxPerUnit, maxPx);
+}
+
+export type PolarizationResult = { force: Vec2; induced: number };
+
+/**
+ * A neutral conductor near a point charge polarizes: its free charges shift so the
+ * near side takes the opposite sign and the far side the same sign. Model the
+ * sphere as two induced point charges of magnitude `induced` at its surface along
+ * the axis to the source (near = opposite sign, far = same sign). The induced
+ * magnitude grows with the source field at the sphere (proportional to |q| / d^2).
+ * The net force is the sum of the forces on the two induced charges; it points
+ * toward the source because the opposite (near) charge is closer than the same
+ * (far) one, so attraction beats repulsion. The force is zero when the source sits
+ * at or inside the sphere.
+ */
+export function polarizationForce(
+  source: PointCharge,
+  center: Vec2,
+  sphereRadius: number,
+  induceK = 1,
+): PolarizationResult {
+  const dx = source.x - center.x;
+  const dy = source.y - center.y;
+  const d = Math.hypot(dx, dy);
+  if (d <= sphereRadius) return { force: { x: 0, y: 0 }, induced: 0 };
+
+  const ux = dx / d;
+  const uy = dy / d;
+  const induced = (induceK * Math.abs(source.q)) / (d * d);
+  const sign = source.q >= 0 ? 1 : -1;
+  const near: PointCharge = { x: center.x + ux * sphereRadius, y: center.y + uy * sphereRadius, q: -sign * induced };
+  const far: PointCharge = { x: center.x - ux * sphereRadius, y: center.y - uy * sphereRadius, q: sign * induced };
+
+  const fNear = forceOnCharge(near, source);
+  const fFar = forceOnCharge(far, source);
+  return { force: normalizeZero({ x: fNear.x + fFar.x, y: fNear.y + fFar.y }), induced };
 }

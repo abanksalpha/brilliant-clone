@@ -92,6 +92,8 @@ describe('StatDock', () => {
 
   it('shows streak and total XP from cloud progress', () => {
     const stamp = todayStamp();
+    // Total XP is the single earned-XP counter (questionXp); lesson completion no
+    // longer adds a bonus, so 60 earned XP shows as 60, not 180.
     cloud.states.set('u1', {
       progress: {
         completedLessonIds: ['coulombs-law'],
@@ -106,7 +108,7 @@ describe('StatDock', () => {
 
     renderDock();
 
-    expect(screen.getByText('180 XP')).toBeInTheDocument();
+    expect(screen.getByText('60 XP')).toBeInTheDocument();
     expect(screen.getByText('1')).toBeInTheDocument();
   });
 
@@ -115,13 +117,14 @@ describe('StatDock', () => {
     expect(screen.getByText('0 XP')).toBeInTheDocument();
 
     act(() => {
+      // A sibling device records 120 earned XP (e.g. solving graded problems).
       cloud.push('u1', {
         progress: {
           completedLessonIds: ['coulombs-law'],
           completionDates: {},
           lastOpenedLessonId: null,
           answeredQuestionIds: [],
-          questionXp: 0,
+          questionXp: 120,
           dailyXp: {},
         },
         lessonSessions: {},

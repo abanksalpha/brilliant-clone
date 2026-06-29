@@ -20,6 +20,11 @@ rules_version = '2';
 //   - misconceptionGraph:  map<string,map>       (optional) nodeId -> { id, status, principleId, wrongBelief, specificNote, caught, missed, strength, lastSeenISO, caughtDayStamps, createdISO }
 //   - problemAttempts:     map<string,map>       (optional) problemId -> { attempts, solvedISO?, hintsUsed }
 //   - problemSessions:     map<string,map>       (optional) setId -> { index, visitedCount, solvedProblemIds, problemIds, work }
+//   - workedExampleSessions: map<string,map>     (optional) rungId -> { revealedCount, explanation, feedback, feedbackError, checked }
+//   - lessonPhase:         map<string,map>       (optional) lessonId -> { phase, within } five-phase resume position
+//   - generatedSets:       map<string,list>      (optional) "lessonId:review|solve" -> generated Problem[] cached for resume
+//   - generatedPlans:      map<string,list>      (optional) "lessonId:review|solve" -> planner ProblemPlan[] cached for resume
+//   - learnCelebratedLessonIds: list<string>     (optional) lessons whose Learn celebration already fired
 //
 // A user may only ever read or write their OWN users document. No user can read
 // or write another user's users document.
@@ -38,7 +43,6 @@ rules_version = '2';
 //   - email:           string (0..320)           (required) shown in search results
 //   - photoURL:        string(https) | null      (required) avatar, https only
 //   - completedCount:  number (0..50)            (required) # live lessons done; drives icon placement
-//   - completedPsetCount: number (0..50)         (optional) # of those lessons' problem sets done; refines placement
 //   - currentLessonId: string | null             (required) lessonId they are currently on
 //   - updatedAt:       timestamp                  (required) last sync time
 //
@@ -78,7 +82,9 @@ service cloud.firestore {
       return data.keys().hasOnly([
                'completedLessonIds', 'completionDates', 'lastOpenedLessonId',
                'answeredQuestionIds', 'questionXp', 'dailyXp', 'lessonSessions',
-               'misconceptions', 'problemAttempts', 'problemSessions', 'misconceptionGraph'
+               'misconceptions', 'problemAttempts', 'problemSessions', 'misconceptionGraph',
+               'lessonPhase', 'learnCelebratedLessonIds', 'workedExampleSessions', 'generatedSets',
+               'generatedPlans'
              ])
         && data.keys().hasAll([
              'completedLessonIds', 'completionDates', 'lastOpenedLessonId',
@@ -98,8 +104,18 @@ service cloud.firestore {
             (data.problemAttempts is map && data.problemAttempts.size() <= 5000))
         && (!('problemSessions' in data) ||
             (data.problemSessions is map && data.problemSessions.size() <= 200))
+        && (!('workedExampleSessions' in data) ||
+            (data.workedExampleSessions is map && data.workedExampleSessions.size() <= 200))
         && (!('misconceptionGraph' in data) ||
-            (data.misconceptionGraph is map && data.misconceptionGraph.size() <= 500));
+            (data.misconceptionGraph is map && data.misconceptionGraph.size() <= 500))
+        && (!('lessonPhase' in data) ||
+            (data.lessonPhase is map && data.lessonPhase.size() <= 200))
+        && (!('generatedSets' in data) ||
+            (data.generatedSets is map && data.generatedSets.size() <= 200))
+        && (!('generatedPlans' in data) ||
+            (data.generatedPlans is map && data.generatedPlans.size() <= 200))
+        && (!('learnCelebratedLessonIds' in data) ||
+            (data.learnCelebratedLessonIds is list && data.learnCelebratedLessonIds.size() <= 50));
     }
 
     // Strict schema + type + size validation for a profile document. Used on
@@ -107,7 +123,7 @@ service cloud.firestore {
     function isValidProfile(data) {
       return data.keys().hasOnly([
                'displayName', 'nameLower', 'email', 'photoURL',
-               'completedCount', 'completedPsetCount', 'currentLessonId', 'updatedAt'
+               'completedCount', 'currentLessonId', 'updatedAt'
              ])
         && data.keys().hasAll([
              'displayName', 'nameLower', 'email', 'photoURL',
@@ -119,8 +135,6 @@ service cloud.firestore {
         && (data.photoURL == null ||
             (data.photoURL is string && data.photoURL.size() <= 1000 && data.photoURL.matches('^https://.*')))
         && data.completedCount is number && data.completedCount >= 0 && data.completedCount <= 50
-        && (!('completedPsetCount' in data) ||
-            (data.completedPsetCount is number && data.completedPsetCount >= 0 && data.completedPsetCount <= 50))
         && (data.currentLessonId == null ||
             (data.currentLessonId is string && data.currentLessonId.size() <= 200))
         && data.updatedAt is timestamp;

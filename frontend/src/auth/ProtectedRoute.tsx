@@ -1,11 +1,12 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
+import { LoadingScreen } from '../components/shell/LoadingScreen';
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { currentUser, isEmailVerified, isLoading } = useAuth();
 
   if (isLoading) {
-    return <main className="centered-page">Loading</main>;
+    return <LoadingScreen />;
   }
 
   if (!currentUser) {

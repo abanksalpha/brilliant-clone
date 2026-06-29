@@ -1,0 +1,68 @@
+/* Phase 3 explanation surface. The hand-drawn panel chrome (border, paper fill,
+ * wobble) comes from .theme-handdrawn .panel; these rules only handle the
+ * reading layout. Everything is scoped to .explanation-slides so the shared
+ * .lesson-phase class stays untouched for the other phases. */
+
+.explanation-slides {
+  width: min(100%, 760px);
+  /* Top inset only (var(--s-6) = 24px), inline auto to center. The bottom inset is
+     the ::after spacer below, mirroring WorkedExample (margin-top + spacer). A real
+     bottom margin here would be the trailing edge of the scroll content and get
+     clipped at the scroll end (flush box), and once the spacer un-clips it, it would
+     stack with the spacer to 48px, so the bottom clearance lives only in the spacer. */
+  margin: var(--s-6) auto 0;
+}
+
+/* Bottom breathing room so the Learn box clears the viewport floor instead of
+   sitting flush against it when scrolled to the end. A trailing margin/padding is
+   dropped from the scroll extent at the scroll end, so the clearance is a real box
+   appended after the box in its host stage (its edge is counted in the scroll
+   height). Scoped with :has so only the Learn rung's stage grows. var(--s-6) =
+   24px mirrors the box's top inset for a symmetric 24px inset on the 4px scale. */
+.lesson-stage:has(.explanation-slides)::after {
+  content: '';
+  flex: none;
+  height: var(--s-6);
+}
+
+.explanation-slide__heading {
+  text-wrap: balance;
+}
+
+/* The reading column fills the card width (the panel padding is the only inset),
+ * so prose runs to the box edge instead of stopping short. The RichText 68ch cap
+ * is lifted here for the same reason. */
+.explanation-slide__body {
+  line-height: 1.55;
+}
+
+.explanation-slide__body .rich-text,
+.explanation-slide__body .rich-text p {
+  max-width: none;
+}
+
+/* Figure text reads as a sketched diagram frame: a dashed, muted aside that sits
+ * apart from the prose without competing with the primary action. */
+.explanation-slide__figure {
+  margin: var(--s-5) 0 0;
+  padding: var(--s-4) var(--s-5);
+  border: 2px dashed color-mix(in oklab, var(--sketch-ink) 52%, var(--sketch-paper));
+  border-radius: var(--sketch-wobbly-sm);
+  background: var(--hd-muted-surface);
+}
+
+.explanation-slides__nav {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--s-4);
+  margin-top: var(--s-6);
+}
+
+/* Position marker only, pushed left so the action button anchors right whether
+ * or not a count is shown. */
+.explanation-slides__count {
+  margin: 0 auto 0 0;
+  color: var(--hd-ink-faint);
+  font-size: 0.95rem;
+}

@@ -13,15 +13,20 @@ import {
   DAILY_XP_GOAL,
   LIVE_LESSON_LIMIT,
   XP_PER_LESSON,
+  awardProblemXp,
   calculateStreakDays,
+  getLessonPhase as selectLessonPhase,
   markLessonCompleted,
   markLessonOpened as applyMarkLessonOpened,
   markProblemSetComplete as applyMarkProblemSetComplete,
   markQuestionAnswered,
+  setLessonPhase as applySetLessonPhase,
   xpEarnedToday,
   type DashboardProgress,
+  type LessonPhasePosition,
   type ProblemAttempt,
 } from './dashboardProgress';
+import type { Problem, ProblemPlan } from '../content/problemSchema';
 import { recordGradedAttempt } from '../mastery/masteryModel';
 import { applyCatch, applyConceptMiss, type ConceptMatch } from '../mastery/misconceptionGraph';
 import {
@@ -36,6 +41,12 @@ import {
   selectProblemSetSession,
   type ProblemSetSession,
 } from './problemSessionProgress';
+import {
+  mergeWorkedExampleSession,
+  removeWorkedExampleSession,
+  selectWorkedExampleSession,
+  type WorkedExampleSession,
+} from './workedExampleProgress';
 import {
   EMPTY_CLOUD_STATE,
   saveUserCloudState,
@@ -62,7 +73,12 @@ type ProgressContextValue = {
   getProblemSetSession: (setId: string) => ProblemSetSession | null;
   saveProblemSetSession: (setId: string, session: ProblemSetSession) => void;
   clearProblemSetSession: (setId: string) => void;
+  getWorkedExampleSession: (key: string) => WorkedExampleSession | null;
+  saveWorkedExampleSession: (key: string, session: WorkedExampleSession) => void;
+  clearWorkedExampleSession: (key: string) => void;
   markProblemSetComplete: (setId: string) => void;
+  getLessonPhase: (lessonId: string) => LessonPhasePosition;
+  setLessonPhase: (lessonId: string, phase: number, within: number) => void;
   recordProblemResult: (input: {
     problemId: string;
     misconceptionIds: string[];
@@ -73,6 +89,10 @@ type ProgressContextValue = {
   }) => void;
   recordConceptMiss: (match: ConceptMatch) => void;
   recordNodeCatch: (nodeId: string) => void;
+  getGeneratedSet: (key: string) => Problem[] | null;
+  saveGeneratedSet: (key: string, problems: Problem[]) => void;
+  getGeneratedPlan: (key: string) => ProblemPlan[] | null;
+  saveGeneratedPlan: (key: string, plans: ProblemPlan[]) => void;
 };
 
 const ProgressContext = createContext<ProgressContextValue | null>(null);
@@ -85,6 +105,11 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState<boolean>(Boolean(userId));
   const stateRef = useRef<UserCloudState>(state);
   stateRef.current = state;
+
+  // The derived streak and today's XP depend on the current calendar day, so the
+  // dashboard can go stale if it stays open across midnight. Track "now" and
+  // advance it when the local day changes to refresh those views without a reload.
+  const [now, setNow] = useState(() => new Date());
 
   useEffect(() => {
     if (!userId) {
@@ -110,6 +135,42 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
 
     return unsubscribe;
   }, [userId]);
+
+  // Advance `now` at the next local midnight (then reschedule), and also on focus
+  // or tab visibility in case the device slept through the scheduled tick. The
+  // focus path only updates when the calendar day actually rolled over, so it
+  // never triggers needless re-renders.
+  useEffect(() => {
+    let midnightTimer: ReturnType<typeof setTimeout> | undefined;
+    const scheduleMidnight = () => {
+      const current = new Date();
+      const nextMidnight = new Date(
+        current.getFullYear(),
+        current.getMonth(),
+        current.getDate() + 1,
+        0,
+        0,
+        1,
+      );
+      midnightTimer = setTimeout(() => {
+        setNow(new Date());
+        scheduleMidnight();
+      }, nextMidnight.getTime() - current.getTime());
+    };
+    scheduleMidnight();
+
+    const refreshIfDayChanged = () => {
+      setNow((previous) => (new Date().toDateString() === previous.toDateString() ? previous : new Date()));
+    };
+    window.addEventListener('focus', refreshIfDayChanged);
+    document.addEventListener('visibilitychange', refreshIfDayChanged);
+
+    return () => {
+      if (midnightTimer) clearTimeout(midnightTimer);
+      window.removeEventListener('focus', refreshIfDayChanged);
+      document.removeEventListener('visibilitychange', refreshIfDayChanged);
+    };
+  }, []);
 
   // Optimistically updates in-memory state and mirrors the change to Firestore.
   const applyAndPersist = useCallback(
@@ -233,13 +294,19 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
           ...(nextSolvedISO !== undefined ? { solvedISO: nextSolvedISO } : {}),
         };
 
+        // Pay XP for a first solve. awardProblemXp reads the PRIOR solved state
+        // (before nextAttempt below records solvedISO), so a re-solve of an
+        // already-solved problem awards nothing. It bumps both the running XP
+        // counter and today's daily XP.
+        const { nextProgress: xpProgress } = awardProblemXp(previous.progress, problemId, solved, now);
+
         return {
           ...previous,
           progress: {
-            ...previous.progress,
+            ...xpProgress,
             misconceptions: nextMisconceptions,
             problemAttempts: {
-              ...previous.progress.problemAttempts,
+              ...xpProgress.problemAttempts,
               [problemId]: nextAttempt,
             },
           },
@@ -277,6 +344,56 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
         return {
           ...previous,
           progress: { ...previous.progress, misconceptionGraph: nextGraph },
+        };
+      });
+    },
+    [applyAndPersist],
+  );
+
+  const getGeneratedSet = useCallback(
+    (key: string): Problem[] | null => stateRef.current.progress.generatedSets[key] ?? null,
+    [],
+  );
+
+  const saveGeneratedSet = useCallback(
+    (key: string, problems: Problem[]) => {
+      applyAndPersist((previous) => {
+        // Idempotent: the same set reference avoids a redundant cloud write on a
+        // resume that re-saves the cached set it just read.
+        if (previous.progress.generatedSets[key] === problems) {
+          return previous;
+        }
+        return {
+          ...previous,
+          progress: {
+            ...previous.progress,
+            generatedSets: { ...previous.progress.generatedSets, [key]: problems },
+          },
+        };
+      });
+    },
+    [applyAndPersist],
+  );
+
+  const getGeneratedPlan = useCallback(
+    (key: string): ProblemPlan[] | null => stateRef.current.progress.generatedPlans[key] ?? null,
+    [],
+  );
+
+  const saveGeneratedPlan = useCallback(
+    (key: string, plans: ProblemPlan[]) => {
+      applyAndPersist((previous) => {
+        // Idempotent: the same plan reference avoids a redundant cloud write on a
+        // resume that re-saves the cached plan it just read.
+        if (previous.progress.generatedPlans[key] === plans) {
+          return previous;
+        }
+        return {
+          ...previous,
+          progress: {
+            ...previous.progress,
+            generatedPlans: { ...previous.progress.generatedPlans, [key]: plans },
+          },
         };
       });
     },
@@ -325,10 +442,59 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     [applyAndPersist],
   );
 
+  const getWorkedExampleSession = useCallback(
+    (key: string) => selectWorkedExampleSession(stateRef.current.workedExampleSessions, key),
+    [],
+  );
+
+  const saveWorkedExampleSession = useCallback(
+    (key: string, session: WorkedExampleSession) => {
+      applyAndPersist((previous) => {
+        const nextSessions = mergeWorkedExampleSession(previous.workedExampleSessions, key, session);
+        if (nextSessions === previous.workedExampleSessions) {
+          return previous;
+        }
+        return { ...previous, workedExampleSessions: nextSessions };
+      });
+    },
+    [applyAndPersist],
+  );
+
+  const clearWorkedExampleSession = useCallback(
+    (key: string) => {
+      applyAndPersist((previous) => {
+        const nextSessions = removeWorkedExampleSession(previous.workedExampleSessions, key);
+        if (nextSessions === previous.workedExampleSessions) {
+          return previous;
+        }
+        return { ...previous, workedExampleSessions: nextSessions };
+      });
+    },
+    [applyAndPersist],
+  );
+
   const markProblemSetComplete = useCallback(
     (setId: string) => {
       applyAndPersist((previous) => {
         const nextProgress = applyMarkProblemSetComplete(previous.progress, setId);
+        if (nextProgress === previous.progress) {
+          return previous;
+        }
+        return { ...previous, progress: nextProgress };
+      });
+    },
+    [applyAndPersist],
+  );
+
+  const getLessonPhase = useCallback(
+    (lessonId: string) => selectLessonPhase(stateRef.current.progress, lessonId),
+    [],
+  );
+
+  const setLessonPhase = useCallback(
+    (lessonId: string, phase: number, within: number) => {
+      applyAndPersist((previous) => {
+        const nextProgress = applySetLessonPhase(previous.progress, lessonId, phase, within);
         if (nextProgress === previous.progress) {
           return previous;
         }
@@ -346,10 +512,14 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
       isLoading,
       completedCount,
       lessonLimit: LIVE_LESSON_LIMIT,
-      totalXp: completedCount * XP_PER_LESSON + state.progress.questionXp,
-      todayXp: xpEarnedToday(state.progress),
+      // A single earned-XP counter: every graded problem's first solve adds
+      // XP_PER_PROBLEM to progress.questionXp (lessons and questions add 0), so
+      // the lifetime total is just that counter — no per-completion bonus that
+      // could double count.
+      totalXp: state.progress.questionXp,
+      todayXp: xpEarnedToday(state.progress, now),
       dailyGoal: DAILY_XP_GOAL,
-      streakDays: calculateStreakDays(state.progress),
+      streakDays: calculateStreakDays(state.progress, now),
       markLessonOpened,
       completeLesson,
       answerQuestion,
@@ -359,13 +529,23 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
       getProblemSetSession,
       saveProblemSetSession,
       clearProblemSetSession,
+      getWorkedExampleSession,
+      saveWorkedExampleSession,
+      clearWorkedExampleSession,
       markProblemSetComplete,
+      getLessonPhase,
+      setLessonPhase,
       recordProblemResult,
       recordConceptMiss,
       recordNodeCatch,
+      getGeneratedSet,
+      saveGeneratedSet,
+      getGeneratedPlan,
+      saveGeneratedPlan,
     };
   }, [
     state,
+    now,
     isLoading,
     markLessonOpened,
     completeLesson,
@@ -376,10 +556,19 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     getProblemSetSession,
     saveProblemSetSession,
     clearProblemSetSession,
+    getWorkedExampleSession,
+    saveWorkedExampleSession,
+    clearWorkedExampleSession,
     markProblemSetComplete,
+    getLessonPhase,
+    setLessonPhase,
     recordProblemResult,
     recordConceptMiss,
     recordNodeCatch,
+    getGeneratedSet,
+    saveGeneratedSet,
+    getGeneratedPlan,
+    saveGeneratedPlan,
   ]);
 
   return <ProgressContext.Provider value={value}>{children}</ProgressContext.Provider>;

@@ -1,0 +1,21 @@
+{
+  "problemId": "cci-share-three-spheres",
+  "lessonId": "charging-conductors-insulators",
+  "unitId": "electrostatics",
+  "skillIds": ["charging-conductors-insulators"],
+  "principleIds": ["conductor-equilibrium"],
+  "misconceptionTags": ["charge-shared-three-ways", "charge-sharing-single-step"],
+  "kind": "single",
+  "difficulty": 4,
+  "difficultyBand": 4,
+  "difficultyFeatures": {
+    "steps": 4,
+    "symbolic": false,
+    "calculus": false,
+    "multiPart": true,
+    "hasTrap": true
+  },
+  "provenance": "authored",
+  "title": "Charge shared down a line of spheres",
+  "prompt": "Three identical isolated metal spheres sit far apart. Sphere A carries +12 nC; spheres B and C are neutral. Sphere A is touched to sphere B and separated, then sphere B is touched to sphere C and separated. Find the final charge on sphere C."
+}

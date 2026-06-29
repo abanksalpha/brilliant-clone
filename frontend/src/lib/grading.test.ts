@@ -8,9 +8,11 @@ import type {
   HintInput,
   HintResult,
   KnownMisconception,
-  ReviewProblemInput,
-  ReviewProblemResult,
+  PlanProblemSetInput,
+  PlannedProblemInput,
+  PlannedProblemResult,
 } from './grading';
+import type { ProblemPlan } from '../content/problemSchema';
 
 // The Firebase boundary is mocked ONLY in these tests; product code never mocks
 // or falls back. `callable` stands in for the function returned by
@@ -54,21 +56,52 @@ const hintResult: HintResult = { tier: 1, text: 'Recall the Coulomb law.', targe
 const askInput: AskInput = { ...gradeInput, question: 'Which charge is enclosed?' };
 const askResult: AskResult = { answer: 'Think about which charge is enclosed.' };
 
-const reviewInput: ReviewProblemInput = {
-  nodeId: 'm-linear-falloff',
-  wrongBelief: 'field strength falls off linearly with distance',
-  principleId: 'inverse-square-law',
-  difficultyBand: 2,
+const planInput: PlanProblemSetInput = {
+  slots: [
+    {
+      skillIds: ['coulombs-law'],
+      principleIds: ['coulomb-force'],
+      difficultyBand: 4,
+      kind: 'single',
+      requireChain: false,
+      targetMisconceptions: [
+        { nodeId: 'm-linear-falloff', principleId: 'coulomb-force', wrongBelief: 'like charges attract' },
+      ],
+    },
+  ],
+  existingStatements: ['An authored Coulomb problem already in the set.'],
+  lessonTitle: "Coulomb's Law",
 };
 
-const reviewResult: ReviewProblemResult = {
-  problemId: 'rev-inverse-square-1',
-  statement: 'A +2 microcoulomb charge sits at the origin. Find the field at r = 0.5 m.',
-  skillIds: ['coulomb-field'],
-  principleIds: ['inverse-square-law'],
+const planResult: ProblemPlan[] = [
+  {
+    slotIndex: 0,
+    title: 'Net force from two point charges',
+    description: 'Two point charges on a line; find the net force on a third placed between them.',
+  },
+];
+
+const plannedInput: PlannedProblemInput = {
+  skillIds: ['coulombs-law'],
+  principleIds: ['coulomb-force'],
+  difficultyBand: 4,
+  requireChain: false,
+  targetMisconceptions: [
+    { nodeId: 'm-linear-falloff', principleId: 'coulomb-force', wrongBelief: 'like charges attract' },
+  ],
+  description: 'Two point charges on a line; find the net force on a third placed between them.',
+  title: 'Net force from two point charges',
+};
+
+const plannedResult: PlannedProblemResult = {
+  problemId: 'syn:inverse-square-1',
+  statement: 'A +2 microcoulomb charge sits at the origin. Find the net force on a third charge.',
+  title: 'Net force from two point charges',
+  skillIds: ['coulombs-law'],
+  principleIds: ['coulomb-force'],
   misconceptionTags: ['linear-falloff'],
-  difficultyBand: 2,
-  targetMisconceptionNodeId: 'm-linear-falloff',
+  difficultyBand: 4,
+  targetMisconceptionNodeIds: ['m-linear-falloff'],
 };
 
 beforeEach(() => {
@@ -183,30 +216,52 @@ describe('askQuestion', () => {
   });
 });
 
-describe('generateReviewProblem', () => {
-  it('returns the callable data and targets the generateReviewProblem callable', async () => {
-    callable.mockResolvedValueOnce({ data: reviewResult });
-    const { generateReviewProblem } = await loadGrading(fakeFunctions);
+describe('planProblemSet', () => {
+  it('unwraps { plans } from the callable and targets the planProblemSet callable', async () => {
+    callable.mockResolvedValueOnce({ data: { plans: planResult } });
+    const { planProblemSet } = await loadGrading(fakeFunctions);
 
-    const result = await generateReviewProblem(reviewInput);
+    const result = await planProblemSet(planInput);
 
-    expect(httpsCallable).toHaveBeenCalledWith(fakeFunctions, 'generateReviewProblem');
-    expect(callable).toHaveBeenCalledWith(reviewInput);
-    expect(result).toEqual(reviewResult);
+    expect(httpsCallable).toHaveBeenCalledWith(fakeFunctions, 'planProblemSet');
+    expect(callable).toHaveBeenCalledWith(planInput);
+    // The wrapper returns the bare ProblemPlan[] array, not the { plans } envelope.
+    expect(result).toEqual(planResult);
   });
 
   it('propagates callable errors instead of swallowing them', async () => {
-    const failure = new Error('functions/internal: review generation failed');
+    const failure = new Error('functions/internal: planning failed');
     callable.mockRejectedValueOnce(failure);
-    const { generateReviewProblem } = await loadGrading(fakeFunctions);
+    const { planProblemSet } = await loadGrading(fakeFunctions);
 
-    await expect(generateReviewProblem(reviewInput)).rejects.toBe(failure);
+    await expect(planProblemSet(planInput)).rejects.toBe(failure);
+  });
+});
+
+describe('generatePlannedProblem', () => {
+  it('returns the callable data and targets the generatePlannedProblem callable', async () => {
+    callable.mockResolvedValueOnce({ data: plannedResult });
+    const { generatePlannedProblem } = await loadGrading(fakeFunctions);
+
+    const result = await generatePlannedProblem(plannedInput);
+
+    expect(httpsCallable).toHaveBeenCalledWith(fakeFunctions, 'generatePlannedProblem');
+    expect(callable).toHaveBeenCalledWith(plannedInput);
+    expect(result).toEqual(plannedResult);
+  });
+
+  it('propagates callable errors instead of swallowing them', async () => {
+    const failure = new Error('functions/internal: generation failed');
+    callable.mockRejectedValueOnce(failure);
+    const { generatePlannedProblem } = await loadGrading(fakeFunctions);
+
+    await expect(generatePlannedProblem(plannedInput)).rejects.toBe(failure);
   });
 });
 
 describe('when Firebase is not configured', () => {
   it('rejects with a clear error and never reaches the callable', async () => {
-    const { gradeAttempt, getHint, askQuestion, generateReviewProblem } = await loadGrading(null);
+    const { gradeAttempt, getHint, askQuestion, planProblemSet, generatePlannedProblem } = await loadGrading(null);
 
     await expect(gradeAttempt(gradeInput)).rejects.toThrow(
       'Grading is unavailable: Firebase is not configured.',
@@ -217,8 +272,11 @@ describe('when Firebase is not configured', () => {
     await expect(askQuestion(askInput)).rejects.toThrow(
       'Ask is unavailable: Firebase is not configured.',
     );
-    await expect(generateReviewProblem(reviewInput)).rejects.toThrow(
-      'Review generation is unavailable: Firebase is not configured.',
+    await expect(planProblemSet(planInput)).rejects.toThrow(
+      'Problem planning is unavailable: Firebase is not configured.',
+    );
+    await expect(generatePlannedProblem(plannedInput)).rejects.toThrow(
+      'Problem generation is unavailable: Firebase is not configured.',
     );
     expect(httpsCallable).not.toHaveBeenCalled();
   });

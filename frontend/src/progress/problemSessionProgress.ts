@@ -16,10 +16,10 @@ export type ProblemWork = {
   viewport: Viewport;
   phase: ProblemPhase;
   attempts: number;
-  hintTier: 0 | 1 | 2;
-  hintsUsed: number;
+  // The escalating hints given so far, in order. Length is both the count used
+  // and the next hint's level; there is no ceiling.
+  hints: HintResult[];
   result: GradeResult | null;
-  hint: HintResult | null;
   recorded: boolean;
 };
 
@@ -48,13 +48,6 @@ function finiteOr(value: unknown, fallback: number): number {
 
 function nonNegativeInt(value: unknown, fallback: number): number {
   return Math.max(0, Math.trunc(finiteOr(value, fallback)));
-}
-
-function clampTier(value: unknown): 0 | 1 | 2 {
-  const tier = Math.trunc(finiteOr(value, 0));
-  if (tier <= 0) return 0;
-  if (tier >= 2) return 2;
-  return 1;
 }
 
 function stringOrNull(value: unknown): string | null {
@@ -124,7 +117,26 @@ function coerceGradeResult(value: unknown): GradeResult | null {
 
 function coerceHintResult(value: unknown): HintResult | null {
   if (!isObject(value) || typeof value.text !== 'string') return null;
-  return { tier: clampTier(value.tier), text: value.text, targetLineId: stringOrNull(value.targetLineId) };
+  // `level` is the current field; `tier` is the legacy name from the 3-tier era.
+  return {
+    level: nonNegativeInt(value.level ?? value.tier, 0),
+    text: value.text,
+    targetLineId: stringOrNull(value.targetLineId),
+  };
+}
+
+function coerceHints(value: Record<string, unknown>): HintResult[] {
+  if (Array.isArray(value.hints)) {
+    const hints: HintResult[] = [];
+    for (const raw of value.hints) {
+      const hint = coerceHintResult(raw);
+      if (hint) hints.push(hint);
+    }
+    return hints;
+  }
+  // Back-compat with the old single-hint shape (one `hint` plus `hintTier`).
+  const legacy = coerceHintResult(value.hint);
+  return legacy ? [legacy] : [];
 }
 
 function coercePhase(value: unknown): ProblemPhase {
@@ -138,10 +150,8 @@ function coerceWork(value: unknown): ProblemWork | null {
     viewport: coerceViewport(value.viewport),
     phase: coercePhase(value.phase),
     attempts: nonNegativeInt(value.attempts, 0),
-    hintTier: clampTier(value.hintTier),
-    hintsUsed: nonNegativeInt(value.hintsUsed, 0),
+    hints: coerceHints(value),
     result: coerceGradeResult(value.result),
-    hint: coerceHintResult(value.hint),
     recorded: value.recorded === true,
   };
 }
@@ -191,10 +201,39 @@ export function selectProblemSetSession(
   return sessions[setId] ?? null;
 }
 
+// Round a captured sample to a fixed number of decimals, normalizing a -0 to 0
+// so a rounded zero stays a plain 0 in the persisted document.
+function roundTo(value: number, decimals: number): number {
+  const factor = 10 ** decimals;
+  const rounded = Math.round(value * factor) / factor;
+  return rounded === 0 ? 0 : rounded;
+}
+
+// Shrink a stroke to the precision persistence actually needs. The live canvas
+// captures full double-precision pointer samples (about 17 significant digits
+// per coordinate) plus a high-resolution capture timestamp, but redrawing
+// resumed work only needs sub-pixel geometry and a coarse pressure. Storing the
+// raw samples makes a dense page serialize several times larger than necessary.
+function compactStroke(stroke: Stroke): Stroke {
+  return {
+    id: stroke.id,
+    points: stroke.points.map((point) => ({
+      x: roundTo(point.x, 2),
+      y: roundTo(point.y, 2),
+      p: roundTo(point.p, 2),
+      t: Math.round(point.t),
+    })),
+  };
+}
+
 /**
  * Returns a new sessions map with `setId` set to `session`. The session is run
  * through a JSON round trip so it never carries an `undefined` value (e.g. an
- * absent `correctSolution`) that the Firestore SDK would reject.
+ * absent `correctSolution`) that the Firestore SDK would reject, and its strokes
+ * are compacted to sub-pixel precision. The whole learner state is persisted as
+ * one Firestore document with a hard 1 MiB limit; raw full-precision handwriting
+ * pushes a dense page past that limit, and Firestore silently rolls the rejected
+ * write back, so the work is lost on return. Compacting keeps it well under.
  */
 export function mergeProblemSetSession(
   sessions: ProblemSessionState,
@@ -202,7 +241,11 @@ export function mergeProblemSetSession(
   session: ProblemSetSession,
 ): ProblemSessionState {
   const safe = JSON.parse(JSON.stringify(session)) as ProblemSetSession;
-  return { ...sessions, [setId]: safe };
+  const work: Record<string, ProblemWork> = {};
+  for (const [problemId, entry] of Object.entries(safe.work)) {
+    work[problemId] = { ...entry, strokes: entry.strokes.map(compactStroke) };
+  }
+  return { ...sessions, [setId]: { ...safe, work } };
 }
 
 export function removeProblemSetSession(

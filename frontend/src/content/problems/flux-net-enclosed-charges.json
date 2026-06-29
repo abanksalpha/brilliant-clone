@@ -1,0 +1,26 @@
+{
+  "problemId": "flux-net-enclosed-charges",
+  "lessonId": "electric-flux",
+  "unitId": "electrostatics",
+  "skillIds": ["electric-flux"],
+  "principleIds": ["symmetry-gauss"],
+  "misconceptionTags": ["flux-includes-external", "flux-uses-coulomb-constant"],
+  "kind": "single",
+  "difficulty": 5,
+  "difficultyBand": 5,
+  "difficultyFeatures": {
+    "steps": 4,
+    "symbolic": false,
+    "calculus": false,
+    "multiPart": true,
+    "hasTrap": true
+  },
+  "provenance": "authored",
+  "title": "Net flux from several charges",
+  "prompt": "A closed surface encloses a +12 nC charge and a -2.0 nC charge, while a +6.0 nC charge sits just outside it. Find the net electric flux through the surface. Use epsilon_0 = 8.85e-12 C^2/(N m^2).",
+  "givens": [
+    { "label": "charges inside", "value": "+12 nC and -2.0 nC" },
+    { "label": "charge outside", "value": "+6.0 nC" },
+    { "label": "epsilon_0", "value": "8.85e-12 C^2/(N m^2)" }
+  ]
+}

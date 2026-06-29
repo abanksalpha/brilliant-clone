@@ -1,0 +1,25 @@
+{
+  "problemId": "cl-coulomb-triangle-net",
+  "lessonId": "coulombs-law",
+  "unitId": "electrostatics",
+  "skillIds": ["coulombs-law"],
+  "principleIds": ["coulomb-force", "superposition"],
+  "misconceptionTags": ["superposition-magnitude-add", "superposition-direction-error"],
+  "kind": "single",
+  "difficulty": 5,
+  "difficultyBand": 5,
+  "difficultyFeatures": {
+    "steps": 5,
+    "symbolic": false,
+    "calculus": false,
+    "multiPart": false,
+    "hasTrap": true
+  },
+  "provenance": "authored",
+  "title": "Net force on a triangle vertex",
+  "prompt": "Three point charges of +5.0 microcoulomb each sit at the vertices of an equilateral triangle 0.20 m on a side. Find the magnitude of the net electric force on one of the charges. Use k = 8.99e9 N m^2/C^2.",
+  "givens": [
+    { "label": "charge at each vertex", "value": "+5.0 microcoulomb" },
+    { "label": "triangle side length", "value": "0.20 m" }
+  ]
+}

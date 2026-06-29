@@ -1,0 +1,26 @@
+{
+  "problemId": "efcd-rod-end-axis",
+  "lessonId": "electric-fields-of-charge-distributions",
+  "unitId": "electrostatics",
+  "skillIds": ["electric-fields-of-charge-distributions"],
+  "principleIds": ["field-concept", "superposition"],
+  "misconceptionTags": ["distribution-as-point", "rod-end-uses-center"],
+  "kind": "single",
+  "difficulty": 4,
+  "difficultyBand": 4,
+  "difficultyFeatures": {
+    "steps": 4,
+    "symbolic": false,
+    "calculus": true,
+    "multiPart": false,
+    "hasTrap": true
+  },
+  "provenance": "authored",
+  "title": "Field along the axis of a rod",
+  "prompt": "A straight rod of length 0.20 m carries a uniformly distributed charge of +5.0 nC. Find the magnitude of the electric field at a point on the rod's axis, 0.10 m beyond its near end. Use k = 8.99e9 N m^2/C^2.",
+  "givens": [
+    { "label": "rod charge Q", "value": "+5.0 nC" },
+    { "label": "rod length L", "value": "0.20 m" },
+    { "label": "distance beyond the near end a", "value": "0.10 m" }
+  ]
+}

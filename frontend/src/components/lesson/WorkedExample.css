@@ -1,0 +1,209 @@
+/* WorkedExample: the 'worked' rung of Phase 4. Every rule is scoped under
+   .worked-example so it never leaks onto the sibling phase panels. Spacing rides
+   the 4px grid for pixel alignment; color and shape reuse the hand-drawn tokens. */
+
+.worked-example {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  /* A focused reading column centered in the stage, so the worked example does not
+     stretch the full screen width (which left content stranded on the left). */
+  width: min(100%, 720px);
+  align-self: center;
+  /* Top inset matches the Learn slide (margin var(--s-6)) so every card phase's
+     box top edge lines up. */
+  margin-top: var(--s-6);
+}
+
+/* Bottom breathing room so the box clears the viewport floor instead of sitting
+   flush against it on a tall, scrolled rung. The card scroll container
+   (.lesson-shell--card) has no bottom padding, and a trailing margin on the box
+   (or padding on either the overflow:visible stage or the scroll container) is
+   dropped from the scroll extent and clips at the scroll end. A real box at the
+   end of the scrollable content is the one thing whose edge is counted in the
+   scroll height, so the clearance is a spacer appended after the worked example
+   in its host stage. Scoped with :has so only the worked rung's stage grows it,
+   leaving the other card phases' shared stage untouched. var(--s-6) = 24px
+   mirrors the box's top inset for a symmetric inset on the 4px scale. */
+.lesson-stage:has(.worked-example)::after {
+  content: '';
+  flex: none;
+  height: var(--s-6);
+}
+
+.worked-example .eyebrow,
+.worked-example h2 {
+  margin: 0;
+}
+
+.worked-example__prompt {
+  margin: 0;
+  max-width: 68ch;
+  line-height: 1.55;
+}
+
+.worked-example__givens {
+  display: grid;
+  gap: var(--s-2);
+  margin: 0;
+  padding: var(--s-3) var(--s-4);
+  border: 2px dashed var(--sketch-ink);
+  border-radius: var(--sketch-wobbly-sm);
+  background: color-mix(in oklab, var(--sketch-paper) 84%, var(--sketch-muted));
+}
+
+.worked-example__given {
+  display: flex;
+  gap: var(--s-3);
+  align-items: baseline;
+}
+
+.worked-example__given dt {
+  flex: 0 0 auto;
+  min-width: 5ch;
+  color: color-mix(in oklab, var(--sketch-ink) 60%, var(--sketch-paper));
+  font-weight: 700;
+}
+
+.worked-example__given dd {
+  margin: 0;
+  color: var(--sketch-ink);
+}
+
+.worked-example__steps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: worked-step;
+}
+
+.worked-example__step {
+  counter-increment: worked-step;
+  display: flex;
+  /* Center the number badge vertically in the step box, so it sits on the box's
+     mid-line whether the step is one line or wraps to several. */
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-4);
+  border: 2px solid var(--sketch-ink);
+  border-radius: var(--sketch-wobbly-sm);
+  background: var(--sketch-paper);
+  box-shadow: var(--sketch-shadow-soft);
+  line-height: 1.5;
+  animation: worked-step-in var(--dur) var(--ease-out-quint) backwards;
+}
+
+.worked-example__step::before {
+  content: counter(worked-step);
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 2px solid var(--sketch-ink);
+  border-radius: 50%;
+  background: var(--sketch-note);
+  color: var(--sketch-ink);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.worked-example__reveal {
+  align-self: flex-start;
+  min-height: 44px;
+}
+
+/* The self-explanation feedback box reuses the shared .feedback-panel chrome
+   (a single-column grid with an 8px row gap, so the heading-to-body rhythm sits
+   on the 4px scale). It drops the default margin so the explain column's gap sets
+   the spacing above it. */
+.worked-example__feedback {
+  /* Mirrors the lucide size={18} icon in WorkedExample.tsx; the body indent is
+     derived from it so the two never drift. */
+  --fb-icon: 18px;
+  /* Cap-height nudge for the heading icon (see h3 svg below): align-items:center
+     leaves the icon ~1.5px below the Kalam cap-height midpoint, so lift it. */
+  --fb-icon-rise: -1.5px;
+  margin: 0;
+}
+
+/* Lay the decorative icon beside the heading text on a 4px-grid gap. */
+.worked-example__feedback h3 {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+/* align-items: center lands the icon on the line box; the heading's cap-height
+   midpoint sits a hair above that, so lift the icon to optically center it on the
+   caps rather than the line box. */
+.worked-example__feedback h3 svg {
+  flex: none;
+  transform: translateY(var(--fb-icon-rise));
+}
+
+/* Hang the icon in the left gutter and align the body copy to the heading text,
+   so the prose reads off a single left edge instead of stepping in under the icon. */
+.worked-example__feedback p {
+  margin-left: calc(var(--fb-icon) + var(--s-2));
+}
+
+/* Check explanation (formative AI feedback) sits beside Continue, wrapping under
+   it on narrow widths. */
+.worked-example__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-3);
+}
+
+.worked-example__actions .secondary-link,
+.worked-example__actions .secondary-button {
+  min-height: 44px;
+}
+
+.worked-example__explain {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+
+.worked-example__label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.worked-example__label span {
+  font-weight: 600;
+}
+
+.worked-example__textarea {
+  width: 100%;
+  min-height: 96px;
+  padding: var(--s-3);
+  resize: vertical;
+  font: inherit;
+  line-height: 1.5;
+}
+
+@keyframes worked-step-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .worked-example__step {
+    animation: none;
+  }
+}

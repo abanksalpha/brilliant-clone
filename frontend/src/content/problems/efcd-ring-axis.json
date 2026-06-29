@@ -1,0 +1,26 @@
+{
+  "problemId": "efcd-ring-axis",
+  "lessonId": "electric-fields-of-charge-distributions",
+  "unitId": "electrostatics",
+  "skillIds": ["electric-fields-of-charge-distributions"],
+  "principleIds": ["field-concept", "superposition"],
+  "misconceptionTags": ["distribution-as-point", "forgot-component-projection"],
+  "kind": "single",
+  "difficulty": 4,
+  "difficultyBand": 4,
+  "difficultyFeatures": {
+    "steps": 4,
+    "symbolic": false,
+    "calculus": true,
+    "multiPart": false,
+    "hasTrap": true
+  },
+  "provenance": "authored",
+  "title": "Field on the axis of a charged ring",
+  "prompt": "A ring of radius 0.10 m carries a uniformly distributed charge of +5.0 nC. Find the magnitude of the electric field at a point on the ring's axis, 0.15 m from its center. Use k = 8.99e9 N m^2/C^2.",
+  "givens": [
+    { "label": "ring charge Q", "value": "+5.0 nC" },
+    { "label": "ring radius R", "value": "0.10 m" },
+    { "label": "axial distance x", "value": "0.15 m" }
+  ]
+}

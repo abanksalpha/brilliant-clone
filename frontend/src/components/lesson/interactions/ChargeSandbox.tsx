@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import type { SandboxConfig } from '../../../content';
-import type { AnswerStatus } from '../FeedbackRenderer';
 import { magnitude, netForceFromCharges, type PointCharge } from '../physics';
 import {
   Arrow,
@@ -10,7 +9,11 @@ import {
   ReadoutRow,
   clamp,
   usePointerDrag,
-} from '../scenes/primitives';
+  } from '../scenes/primitives';
+
+// The answer outcome a sandbox interaction reports. Inlined when the saga
+// feedback renderer was removed; ChargeSandbox is its only remaining consumer.
+type AnswerStatus = 'correct' | 'wrong';
 
 type ChargeSandboxProps = {
   config: SandboxConfig;

@@ -80,8 +80,23 @@ export const PRINCIPLES: Principle[] = [
     name: 'Transients',
     description: 'Time behavior of RC, LR, and LC circuits.',
   },
+  // Mechanics prerequisites. Not part of the E&M framework itself, but the
+  // lesson 1 Phase 1 review seeds (kinematics, forces, energy) reference these so
+  // every authored problem still names a catalogued principle.
+  {
+    id: 'mechanics-kinematics',
+    name: 'Kinematics',
+    description:
+      'Motion under constant acceleration, including free fall, related through the kinematic equations.',
+  },
+  {
+    id: 'mechanics-newtons-laws',
+    name: "Newton's laws",
+    description: 'Net force sets acceleration, and forces resolve into components along chosen axes.',
+  },
+  {
+    id: 'mechanics-energy',
+    name: 'Work and energy',
+    description: 'Work, kinetic energy, gravitational potential energy, and conservation of energy.',
+  },
 ];
-
-export function getPrinciple(id: string): Principle | undefined {
-  return PRINCIPLES.find((principle) => principle.id === id);
-}

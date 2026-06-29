@@ -33,37 +33,29 @@ export type Problem = {
   difficulty: number; // 1..5
   difficultyBand: number; // 1..5, AP-Classroom = 4..5
   difficultyFeatures: DifficultyFeatures;
-  provenance: 'authored' | 'variant' | 'synthesis';
-  templateId?: string;
+  provenance: 'authored' | 'synthesis';
   title: string;
   prompt: string;
   givens?: ProblemGiven[];
   figure?: string; // optional text description of a figure
-  // Set only on generated review problems aimed at a specific emergent
-  // misconception node, so solving one can credit a spaced catch to that node.
-  targetMisconceptionNodeId?: string;
-  // Present only on a review-slot placeholder: the set carries the request, and
-  // the player generates the real problem on demand when the student reaches it
-  // (never up front). Cleared once the problem is materialized.
-  pendingReview?: PendingReview;
+  targetMisconceptionNodeIds?: string[]; // node ids a generated problem traps; a correct solve credits a catch on each
   // The id the backend grades against. Differs from problemId only for a
-  // materialized review problem, whose problemId stays the stable placeholder id
-  // (for set order and progress) while grading targets the freshly generated key.
+  // generated problem whose stable set id and graded key diverge; for authored
+  // problems it is omitted and grading targets problemId.
   gradeId?: string;
+  // The plan slot a generated problem realizes (a finite integer), set by the
+  // builders. Optional and only present on generated problems; authored problems
+  // never carry it. Resume and per-slot retry match a persisted problem to its
+  // slot by this index rather than by array position or count.
+  planSlotIndex?: number;
 };
 
-// The request a review-slot placeholder carries so the player can generate the
-// real problem on demand, aimed at one emergent misconception node.
-export type PendingReview = {
-  nodeId: string;
-  wrongBelief: string;
-  principleId: string;
-  difficultyBand: number;
-};
-
-export type Misconception = {
-  id: string;
-  name: string;
-  shortLabel: string;
-  description: string;
+// One planned problem in a generated set. A planner agent returns one plan per
+// generated slot (mutually distinct by construction), then a generator subagent
+// realizes each into a full Problem. This is the shared shape with the backend
+// planProblemSet callable.
+export type ProblemPlan = {
+  slotIndex: number; // index back into the requested slots, in display order
+  title: string; // a specific, descriptive name (not "Practice")
+  description: string; // a short, moderately specific scenario sketch
 };

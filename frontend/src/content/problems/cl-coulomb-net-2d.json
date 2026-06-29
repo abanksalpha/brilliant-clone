@@ -1,0 +1,26 @@
+{
+  "problemId": "cl-coulomb-net-2d",
+  "lessonId": "coulombs-law",
+  "unitId": "electrostatics",
+  "skillIds": ["coulombs-law"],
+  "principleIds": ["coulomb-force", "superposition"],
+  "misconceptionTags": ["superposition-magnitude-add", "inverse-square-error"],
+  "kind": "single",
+  "difficulty": 5,
+  "difficultyBand": 5,
+  "difficultyFeatures": {
+    "steps": 6,
+    "symbolic": false,
+    "calculus": false,
+    "multiPart": true,
+    "hasTrap": true
+  },
+  "provenance": "authored",
+  "title": "Net force from two charges in a plane",
+  "prompt": "A +3.0 microcoulomb charge sits at the origin and a +3.0 microcoulomb charge sits at (0.40 m, 0). Find the magnitude of the net electric force on a +1.0 microcoulomb charge placed at (0.20 m, 0.20 m). Use k = 8.99e9 N m^2/C^2.",
+  "givens": [
+    { "label": "q_1 at (0, 0)", "value": "+3.0 microcoulomb" },
+    { "label": "q_2 at (0.40 m, 0)", "value": "+3.0 microcoulomb" },
+    { "label": "test charge at (0.20 m, 0.20 m)", "value": "+1.0 microcoulomb" }
+  ]
+}

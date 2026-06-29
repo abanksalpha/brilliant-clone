@@ -78,6 +78,54 @@ describe('verifyProblem', () => {
     }
   });
 
+  it('allows a single principle when chaining is not required (single-topic review)', async () => {
+    const result = await verifyProblem(
+      baseCandidate({ principleIds: ['coulomb-field'] }),
+      agreeingSolve,
+      { requireChain: false },
+    );
+    expect(result).toEqual({ ok: true });
+  });
+
+  it('solves three times by default', async () => {
+    let calls = 0;
+    const countingSolve: IndependentSolve = async () => {
+      calls += 1;
+      return '6.74e3 N/C';
+    };
+    expect(await verifyProblem(baseCandidate(), countingSolve)).toEqual({ ok: true });
+    expect(calls).toBe(3);
+  });
+
+  it('passes when a majority (2 of 3) of the default solves agree', async () => {
+    let calls = 0;
+    // The first two solves agree and the third disagrees: a 2 of 3 majority, so
+    // a single flaky outlier solve does not reject a correct problem.
+    const flakyMajority: IndependentSolve = async () => {
+      calls += 1;
+      return calls <= 2 ? '6.74e3 N/C' : '9.99e9 N/C';
+    };
+    const result = await verifyProblem(baseCandidate(), flakyMajority);
+    expect(calls).toBe(3);
+    expect(result).toEqual({ ok: true });
+  });
+
+  it('fails when only a minority (1 of 3) of the default solves agree', async () => {
+    let calls = 0;
+    // Only the first solve agrees; the other two disagree, so there is no
+    // majority and the candidate is rejected.
+    const minorityAgree: IndependentSolve = async () => {
+      calls += 1;
+      return calls <= 1 ? '6.74e3 N/C' : '9.99e9 N/C';
+    };
+    const result = await verifyProblem(baseCandidate(), minorityAgree);
+    expect(calls).toBe(3);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.reasons).toContain('independent re-solve disagreed with the stated answer');
+    }
+  });
+
   it('fails when the independent re-solve disagrees with the stated answer', async () => {
     const result = await verifyProblem(baseCandidate(), disagreeingSolve);
     expect(result.ok).toBe(false);

@@ -11,6 +11,12 @@ type TextBlock =
       lines: string[];
     }
   | {
+      kind: 'fraction';
+      lhs: string;
+      num: string;
+      den: string;
+    }
+  | {
       kind: 'labeled-list';
       items: Array<{
         label: string;
@@ -38,6 +44,11 @@ const formulaPattern = /\bF\s*=/;
 const equationHeadPattern = /\bF\s*=/g;
 
 const OPERATOR_CHARS = '=+-*/^';
+
+// A raised exponent or scientific-notation power must never wrap onto the next
+// line: "8.85e-12" -> "8.85×10⁻¹²" should stay one unit, and a compound exponent
+// like (x²+R²)^(3/2) must not break at the slash inside the superscript.
+const NOWRAP = { whiteSpace: 'nowrap' as const };
 
 export function RichText({ text, variant = 'body' }: RichTextProps) {
   const blocks = parseRichText(text);
@@ -71,6 +82,9 @@ function parseBlock(block: string): TextBlock {
 
   const labeledList = parseLabeledList(lines);
   if (labeledList) return labeledList;
+
+  const fraction = parseFraction(lines);
+  if (fraction) return fraction;
 
   if (isFormulaBlock(lines)) {
     return {
@@ -131,6 +145,25 @@ function renderBlock(block: TextBlock, index: number) {
           </li>
         ))}
       </ul>
+    );
+  }
+
+  if (block.kind === 'fraction') {
+    return (
+      <div className="rich-equation rich-equation--fraction" key={index}>
+        <span className="eq" role="math" aria-label={speakFraction(block)}>
+          <span className="eq-lhs" aria-hidden="true">
+            {renderMath(block.lhs)}
+          </span>
+          <span className="eq-rel" aria-hidden="true">
+            =
+          </span>
+          <span className="eq-frac" aria-hidden="true">
+            <span className="eq-num">{renderMath(block.num)}</span>
+            <span className="eq-den">{renderMath(block.den)}</span>
+          </span>
+        </span>
+      </div>
     );
   }
 
@@ -204,6 +237,99 @@ function parseLabeledList(lines: string[]): TextBlock | null {
   };
 }
 
+// A standalone single-line equation of the simple shape "SYMBOL = NUM / DEN"
+// (exactly one '=' and one '/') renders as a real typeset fraction in the lesson
+// hand font instead of a monospace chip. Anything more complex (extra '=', no
+// fraction bar, a sentence) falls through to the existing formula/paragraph paths.
+function parseFraction(lines: string[]): TextBlock | null {
+  if (lines.length !== 1) return null;
+  const sides = lines[0].split('=');
+  if (sides.length !== 2) return null;
+  const lhs = sides[0].trim();
+  if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(lhs)) return null;
+  const parts = sides[1].split('/');
+  if (parts.length !== 2) return null;
+  const num = parts[0].trim();
+  const den = parts[1].trim();
+  if (!num || !den) return null;
+  return { kind: 'fraction', lhs, num, den };
+}
+
+// A spoken phrasing of the fraction for assistive tech, e.g. "F equals k q1 q2
+// over r squared". The visual spans are aria-hidden so only this label is read.
+function speakFraction(block: { lhs: string; num: string; den: string }): string {
+  return `${speakMath(block.lhs)} equals ${speakMath(block.num)} over ${speakMath(block.den)}`;
+}
+
+function speakMath(value: string): string {
+  return value
+    .replace(/\^2\b/g, ' squared')
+    .replace(/\^3\b/g, ' cubed')
+    .replace(/\^\(?(-?\d+)\)?/g, ' to the power $1')
+    .replace(/_\{?(-?\d+)\}?/g, '$1')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// Spell-out Greek names, square roots, the multiplication dot, and "epsilon naught"
+// become real symbols, so equations read the same everywhere (inline prose,
+// fractions, and formula blocks). Greek names only convert as whole tokens, so an
+// English word that happens to contain one (graphite, must) is never mangled.
+const GREEK_SYMBOLS: Record<string, string> = {
+  epsilon: 'ε',
+  sigma: 'σ',
+  lambda: 'λ',
+  theta: 'θ',
+  pi: 'π',
+  phi: 'φ',
+  Phi: 'Φ',
+  rho: 'ρ',
+  omega: 'ω',
+  Omega: 'Ω',
+};
+
+function prettySymbols(text: string): string {
+  return text
+    .replace(/\s*\*\s*/g, '·')
+    .replace(/\bepsilon[\s_-]*(?:naught|0)\b/gi, 'epsilon_0')
+    .replace(/\bsqrt\s*\(/g, '√(')
+    .replace(
+      /(?<![A-Za-z])(epsilon|sigma|lambda|theta|pi|phi|Phi|rho|omega|Omega)(?![A-Za-z])/g,
+      (name) => GREEK_SYMBOLS[name] ?? name,
+    );
+}
+
+// Renders an equation fragment with real <sub>/<sup> elements so the digits stay
+// in the equation's own font. The hand face has no Unicode subscript glyphs, so
+// authoring "q_1" as the ₁ character would fall back to a different font; a plain
+// "1" inside <sub> keeps the whole equation in one face.
+function renderMath(value: string): ReactNode {
+  const normalized = prettySymbols(value);
+  const nodes: ReactNode[] = [];
+  const pattern = /([_^])\{?([A-Za-z0-9-]+)\}?/g;
+  let cursor = 0;
+  let key = 0;
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(normalized)) !== null) {
+    if (match.index > cursor) nodes.push(normalized.slice(cursor, match.index));
+    nodes.push(
+      match[1] === '_' ? (
+        <sub key={key} style={NOWRAP}>
+          {match[2]}
+        </sub>
+      ) : (
+        <sup key={key} style={NOWRAP}>
+          {match[2]}
+        </sup>
+      ),
+    );
+    key += 1;
+    cursor = match.index + match[0].length;
+  }
+  if (cursor < normalized.length) nodes.push(normalized.slice(cursor));
+  return nodes.length === 1 ? nodes[0] : nodes;
+}
+
 function isFormulaBlock(lines: string[]) {
   return (
     lines.length <= 4 &&
@@ -242,13 +368,32 @@ function toSuperscript(value: string): string {
   return value.replace(/./g, (ch) => SUPERSCRIPTS[ch] ?? ch);
 }
 
+const SUBSCRIPTS: Record<string, string> = {
+  '-': '₋',
+  '0': '₀',
+  '1': '₁',
+  '2': '₂',
+  '3': '₃',
+  '4': '₄',
+  '5': '₅',
+  '6': '₆',
+  '7': '₇',
+  '8': '₈',
+  '9': '₉',
+};
+
+function toSubscript(value: string): string {
+  return value.replace(/./g, (ch) => SUBSCRIPTS[ch] ?? ch);
+}
+
 // Converts authoring shorthand ("r-squared", "epsilon-0", "4*pi") into the same
 // clean notation the interactive scenes use, so equations read as real math.
 function prettyMath(equation: string): string {
-  return equation
+  return prettySymbols(equation)
     .replace(/-squared\b/gi, '²')
     .replace(/-cubed\b/gi, '³')
     .replace(/\^\(?(-?\d+)\)?/g, (_match, exponent: string) => toSuperscript(exponent))
+    .replace(/_\{?(-?\d+)\}?/g, (_match, index: string) => toSubscript(index))
     .replace(/\bepsilon-0\b/gi, 'ε₀')
     .replace(/\bepsilon\b/gi, 'ε')
     .replace(/\bpi\b/gi, 'π')
@@ -314,6 +459,124 @@ function findEquationEnd(text: string, bodyStart: number): number {
   return end;
 }
 
+// Inline math typesetting applied to ordinary prose so authored notation reads as
+// real math: exponents (r^2 -> r squared), subscripts (q_1 -> q sub 1), scientific
+// notation (8.99e9 -> 8.99 x 10^9), and the multiplication dot (a*b -> a.b). The
+// ASCII syntax (^, _, digit-e-digit, *) does not occur in normal prose, so applying
+// these globally never mis-reads a sentence as an equation. Digits ride in real
+// <sub>/<sup> elements (not Unicode glyphs) so they keep the surrounding font; the
+// hand faces have no dedicated sub/superscript glyphs.
+const INLINE_MATH =
+  /(?<![A-Za-z0-9.])(\d+(?:\.\d+)?)[eE](-?\d+)(?![A-Za-z0-9])|(?<=[\w)\]επθσλρφΦωΩ])\^\(([^)]+)\)|(?<=[\w)\]επθσλρφΦωΩ])\^(-?\d+)|(?<=[\w)\]επθσλρφΦωΩ])_\{?([A-Za-z0-9]+)\}?/gu;
+
+// Characters that mark a space-separated token as part of a math expression: the
+// relation/arithmetic operators, the fraction slash, grouping, the sub/superscript
+// markers, and the multiplication dot.
+const MATH_TOKEN_CHARS = '=/^_·×+-()[]√';
+
+function mathCore(token: string): string {
+  return token.replace(/^[(["']+/, '').replace(/[)\].,;:!?"']+$/, '');
+}
+
+// A single space-separated token that reads as math: a number, a one-character
+// symbol or unit (F, k, r, m, N, C, ...), or anything carrying a math operator.
+function isMathToken(token: string): boolean {
+  const core = mathCore(token);
+  if (core === '') return false;
+  if (/\d/.test(core)) return true;
+  if ([...core].some((ch) => MATH_TOKEN_CHARS.includes(ch))) return true;
+  return /^[A-Za-zµμεπθσλρφΦωΩ]$/.test(core);
+}
+
+// Joins the spaces inside an inline equation with non-breaking spaces so the
+// expression never line-breaks mid-formula: the whole equation stays on one line
+// and wraps down to the next line as a single unit rather than splitting after
+// "=" or orphaning "/ r^2". A token ending in a comma or semicolon still ends the
+// run, so a comma-separated list of givens wraps between entries. Prose is
+// untouched: a run only forms from two or more adjacent math tokens that together
+// carry an operator or a digit.
+function bindMathRuns(text: string): string {
+  const parts = text.split(/(\s+)/).filter((part) => part.length > 0);
+  const isSpace = (part: string) => /^\s+$/.test(part);
+  let out = '';
+  let i = 0;
+  while (i < parts.length) {
+    if (isSpace(parts[i]) || !isMathToken(parts[i])) {
+      out += parts[i];
+      i += 1;
+      continue;
+    }
+    const words: string[] = [parts[i]];
+    let j = i + 1;
+    while (j + 1 < parts.length && isSpace(parts[j]) && isMathToken(parts[j + 1])) {
+      words.push(parts[j + 1]);
+      j += 2;
+      if (/[,;]$/.test(words[words.length - 1])) break;
+    }
+    const joined = words.join(' ');
+    const qualifies = words.length >= 2 && (/[=/^·×]/.test(joined) || /\d/.test(joined));
+    if (qualifies) {
+      out += words.join('\u00A0');
+    } else {
+      out += joined;
+    }
+    i = j;
+  }
+  return out;
+}
+
+export function typesetInline(text: string): ReactNode[] {
+  const prepared = bindMathRuns(prettySymbols(text));
+
+  const nodes: ReactNode[] = [];
+  let cursor = 0;
+  let key = 0;
+  let match: RegExpExecArray | null;
+  INLINE_MATH.lastIndex = 0;
+  while ((match = INLINE_MATH.exec(prepared)) !== null) {
+    if (match.index > cursor) nodes.push(prepared.slice(cursor, match.index));
+    if (match[1] !== undefined) {
+      nodes.push(
+        <span key={key} style={NOWRAP}>
+          {match[1]}×10<sup>{match[2]}</sup>
+        </span>,
+      );
+    } else if (match[3] !== undefined) {
+      nodes.push(
+        <sup key={key} style={NOWRAP}>
+          {match[3]}
+        </sup>,
+      );
+    } else if (match[4] !== undefined) {
+      nodes.push(
+        <sup key={key} style={NOWRAP}>
+          {match[4]}
+        </sup>,
+      );
+    } else if (match[5] !== undefined) {
+      nodes.push(
+        <sub key={key} style={NOWRAP}>
+          {match[5]}
+        </sub>,
+      );
+    }
+    key += 1;
+    cursor = match.index + match[0].length;
+  }
+  if (cursor < prepared.length) nodes.push(prepared.slice(cursor));
+  return nodes.length > 0 ? nodes : [prepared];
+}
+
+// Inline-only typesetting for short strings rendered outside RichText's block
+// parser: problem statements, worked/completion steps, and givens. Same inline math
+// rules. The output is wrapped in a single inline <span> so the text and its
+// <sub>/<sup> nodes stay one inline run: several of these hosts are flex containers
+// (e.g. .worked-example__step), where a bare fragment would turn each node into a
+// separate flex item and scatter the sub/superscripts across the row.
+export function MathText({ text }: { text: string }) {
+  return <span className="math-text">{typesetInline(text)}</span>;
+}
+
 function renderInline(text: string): ReactNode {
   equationHeadPattern.lastIndex = 0;
   const nodes: ReactNode[] = [];
@@ -337,7 +600,7 @@ function renderInline(text: string): ReactNode {
     }
 
     if (headStart > cursor) {
-      nodes.push(text.slice(cursor, headStart));
+      nodes.push(...typesetInline(text.slice(cursor, headStart)));
     }
     nodes.push(
       <code className="rich-inline-equation" key={`eq-${key}`}>
@@ -350,7 +613,7 @@ function renderInline(text: string): ReactNode {
   }
 
   if (cursor < text.length) {
-    nodes.push(text.slice(cursor));
+    nodes.push(...typesetInline(text.slice(cursor)));
   }
 
   if (nodes.length === 0) return text;

@@ -1,0 +1,25 @@
+{
+  "problemId": "cci-sphere-potential",
+  "lessonId": "charging-conductors-insulators",
+  "unitId": "electrostatics",
+  "skillIds": ["charging-conductors-insulators"],
+  "principleIds": ["conductor-equilibrium", "energy-potential"],
+  "misconceptionTags": ["potential-uses-r-squared", "radius-diameter-confusion"],
+  "kind": "single",
+  "difficulty": 4,
+  "difficultyBand": 4,
+  "difficultyFeatures": {
+    "steps": 3,
+    "symbolic": false,
+    "calculus": false,
+    "multiPart": false,
+    "hasTrap": true
+  },
+  "provenance": "authored",
+  "title": "Potential at a charged sphere's surface",
+  "prompt": "A solid metal sphere of radius 0.20 m carries +4.0 nC. Taking the potential to be zero infinitely far away, find the electric potential at the sphere's surface. Use k = 8.99e9 N m^2/C^2.",
+  "givens": [
+    { "label": "radius R", "value": "0.20 m" },
+    { "label": "charge Q", "value": "+4.0 nC" }
+  ]
+}

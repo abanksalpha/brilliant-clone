@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Check, ChevronDown } from 'lucide-react';
 
@@ -38,25 +38,58 @@ const COURSE_CATALOG: { subject: string; courses: string[] }[] = [
 
 export function CourseSwitcher() {
   const navigate = useNavigate();
+  // `open` keeps the menu mounted; `closing` plays the reverse (close) animation
+  // before it unmounts, so the menu eases out instead of vanishing instantly.
   const [open, setOpen] = useState(false);
+  const [closing, setClosing] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearCloseTimer = useCallback(() => {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+  }, []);
+
+  const finishClose = useCallback(() => {
+    clearCloseTimer();
+    setClosing(false);
+    setOpen(false);
+  }, [clearCloseTimer]);
+
+  // Start the reverse animation; the menu unmounts on its animationend, with a
+  // timer fallback in case that event is missed (e.g. the tab is backgrounded).
+  const closeMenu = useCallback(() => {
+    setClosing(true);
+    clearCloseTimer();
+    closeTimerRef.current = setTimeout(finishClose, 400);
+  }, [clearCloseTimer, finishClose]);
+
+  const openMenu = useCallback(() => {
+    clearCloseTimer();
+    setClosing(false);
+    setOpen(true);
+  }, [clearCloseTimer]);
 
   useEffect(() => {
     if (!open) return;
 
     function onPointerDown(event: PointerEvent) {
       if (ref.current && !ref.current.contains(event.target as Node)) {
-        setOpen(false);
+        closeMenu();
       }
     }
 
     window.addEventListener('pointerdown', onPointerDown);
     return () => window.removeEventListener('pointerdown', onPointerDown);
-  }, [open]);
+  }, [open, closeMenu]);
+
+  useEffect(() => () => clearCloseTimer(), [clearCloseTimer]);
 
   function selectCourse(name: string) {
     if (name !== CURRENT_COURSE_NAME) return;
-    setOpen(false);
+    closeMenu();
     navigate('/dashboard');
   }
 
@@ -66,16 +99,23 @@ export function CourseSwitcher() {
         className="course-switcher-btn"
         type="button"
         aria-haspopup="menu"
-        aria-expanded={open}
+        aria-expanded={open && !closing}
         aria-label="Switch course"
-        onClick={() => setOpen((value) => !value)}
+        onClick={() => (open && !closing ? closeMenu() : openMenu())}
       >
         <span className="course-switcher-label">{CURRENT_COURSE_SHORT}</span>
         <ChevronDown className="course-switcher-caret" size={16} strokeWidth={2.4} aria-hidden="true" />
       </button>
 
       {open ? (
-        <div className="course-menu" role="menu" aria-label="Your courses">
+        <div
+          className={`course-menu${closing ? ' course-menu--closing' : ''}`}
+          role="menu"
+          aria-label="Your courses"
+          onAnimationEnd={() => {
+            if (closing) finishClose();
+          }}
+        >
           {COURSE_CATALOG.map((group) => (
             <div className="course-menu-group" key={group.subject}>
               <p className="course-menu-subject">{group.subject}</p>

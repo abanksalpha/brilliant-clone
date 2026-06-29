@@ -1,0 +1,25 @@
+{
+  "problemId": "cci-share-opposite-signs",
+  "lessonId": "charging-conductors-insulators",
+  "unitId": "electrostatics",
+  "skillIds": ["charging-conductors-insulators"],
+  "principleIds": ["conductor-equilibrium"],
+  "misconceptionTags": ["charge-sign-ignored", "charge-sum-not-averaged"],
+  "kind": "single",
+  "difficulty": 4,
+  "difficultyBand": 4,
+  "difficultyFeatures": {
+    "steps": 3,
+    "symbolic": false,
+    "calculus": false,
+    "multiPart": false,
+    "hasTrap": true
+  },
+  "provenance": "authored",
+  "title": "Sharing opposite charges",
+  "prompt": "Two identical isolated metal spheres carry +16 nC and -4.0 nC. They are briefly touched together and then separated. Find the charge on each sphere afterward.",
+  "givens": [
+    { "label": "q on sphere A", "value": "+16 nC" },
+    { "label": "q on sphere B", "value": "-4.0 nC" }
+  ]
+}

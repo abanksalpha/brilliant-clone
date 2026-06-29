@@ -1,0 +1,25 @@
+{
+  "problemId": "cci-shell-surface-charges",
+  "lessonId": "charging-conductors-insulators",
+  "unitId": "electrostatics",
+  "skillIds": ["charging-conductors-insulators"],
+  "principleIds": ["conductor-equilibrium"],
+  "misconceptionTags": ["shell-ignores-inner-surface", "shell-induction-sign-error"],
+  "kind": "single",
+  "difficulty": 5,
+  "difficultyBand": 5,
+  "difficultyFeatures": {
+    "steps": 4,
+    "symbolic": false,
+    "calculus": false,
+    "multiPart": true,
+    "hasTrap": true
+  },
+  "provenance": "authored",
+  "title": "Charge on the outer surface of a shell",
+  "prompt": "A -7.0 nC point charge sits at the center of a hollow metal sphere that carries a net charge of +10 nC. Find the charge on the outer surface of the sphere.",
+  "givens": [
+    { "label": "central charge q", "value": "-7.0 nC" },
+    { "label": "shell net charge", "value": "+10 nC" }
+  ]
+}

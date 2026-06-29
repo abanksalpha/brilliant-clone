@@ -22,8 +22,10 @@ function sampleSession(): ProblemSetSession {
         viewport: { scale: 1.5, tx: 10, ty: -5 },
         phase: 'correct',
         attempts: 2,
-        hintTier: 1,
-        hintsUsed: 1,
+        hints: [
+          { level: 0, text: 'Start from Coulomb law.', targetLineId: null },
+          { level: 1, text: 'Square the distance in the denominator.', targetLineId: 'line-2' },
+        ],
         result: {
           isCorrect: true,
           transcribedSteps: ['E = kq/r^2'],
@@ -32,7 +34,6 @@ function sampleSession(): ProblemSetSession {
           explanation: 'Looks right.',
           correctSolution: ['Square the distance'],
         },
-        hint: { tier: 0, text: 'Start from Coulomb law.', targetLineId: null },
         recorded: true,
       },
     },
@@ -113,10 +114,10 @@ describe('problemSessionProgress', () => {
             viewport: { scale: 0, tx: 'x', ty: 4 },
             phase: 'grading',
             attempts: -2,
-            hintTier: 9,
-            hintsUsed: 1.9,
+            // Legacy single-hint shape with the old `tier` name: it must migrate
+            // to a one-element `hints` array with `level`.
+            hint: { tier: 1, text: 'Re-check the exponent.', targetLineId: null },
             result: null,
-            hint: null,
             recorded: 'yes',
           },
         },
@@ -132,8 +133,7 @@ describe('problemSessionProgress', () => {
     expect(work.viewport).toEqual({ scale: 1, tx: 0, ty: 4 });
     expect(work.phase).toBe('solving');
     expect(work.attempts).toBe(0);
-    expect(work.hintTier).toBe(2);
-    expect(work.hintsUsed).toBe(1);
+    expect(work.hints).toEqual([{ level: 1, text: 'Re-check the exponent.', targetLineId: null }]);
     expect(work.recorded).toBe(false);
   });
 

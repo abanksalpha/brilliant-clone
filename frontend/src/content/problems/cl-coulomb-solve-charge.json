@@ -1,0 +1,27 @@
+{
+  "problemId": "cl-coulomb-solve-charge",
+  "lessonId": "coulombs-law",
+  "unitId": "electrostatics",
+  "skillIds": ["coulombs-law"],
+  "principleIds": ["coulomb-force", "superposition"],
+  "misconceptionTags": ["superposition-direction-error", "inverse-square-error"],
+  "kind": "single",
+  "difficulty": 5,
+  "difficultyBand": 5,
+  "difficultyFeatures": {
+    "steps": 5,
+    "symbolic": true,
+    "calculus": false,
+    "multiPart": false,
+    "hasTrap": true
+  },
+  "provenance": "authored",
+  "title": "Solve for an unknown charge",
+  "prompt": "On the x axis, a +8.0 microcoulomb charge is fixed at x = -0.20 m and a second positive charge of unknown magnitude is fixed at x = +0.20 m. A +3.0 microcoulomb charge at the origin then feels a net electric force of 4.05 N in the +x direction. Find the magnitude of the unknown charge. Use k = 8.99e9 N m^2/C^2.",
+  "givens": [
+    { "label": "charge at x = -0.20 m", "value": "+8.0 microcoulomb" },
+    { "label": "charge at the origin", "value": "+3.0 microcoulomb" },
+    { "label": "unknown charge position", "value": "x = +0.20 m" },
+    { "label": "net force on the origin charge", "value": "4.05 N in +x" }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "problemId": "efcd-infinite-line",
+  "lessonId": "electric-fields-of-charge-distributions",
+  "unitId": "electrostatics",
+  "skillIds": ["electric-fields-of-charge-distributions"],
+  "principleIds": ["field-concept", "superposition"],
+  "misconceptionTags": ["line-uses-inverse-square", "line-omits-factor-2"],
+  "kind": "single",
+  "difficulty": 5,
+  "difficultyBand": 5,
+  "difficultyFeatures": {
+    "steps": 3,
+    "symbolic": false,
+    "calculus": true,
+    "multiPart": false,
+    "hasTrap": true
+  },
+  "provenance": "authored",
+  "title": "Field near a very long line of charge",
+  "prompt": "A very long straight line of charge has a uniform linear charge density of 4.0e-8 C/m. Find the magnitude of the electric field at a point 0.10 m from the line. Use k = 8.99e9 N m^2/C^2.",
+  "givens": [
+    { "label": "linear charge density lambda", "value": "4.0e-8 C/m" },
+    { "label": "distance from the line r", "value": "0.10 m" }
+  ]
+}

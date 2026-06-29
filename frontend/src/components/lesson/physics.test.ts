@@ -4,9 +4,12 @@ import {
   angleDegrees,
   coulombForceMagnitude,
   forceOnCharge,
+  forceVectorsForPair,
   inverseSquare,
   magnitude,
   netForceFromCharges,
+  polarizationForce,
+  scaleForceToPixels,
 } from './physics';
 
 describe('inverseSquare', () => {
@@ -73,5 +76,54 @@ describe('angle helpers', () => {
   it('finds the smallest angle gap with wraparound', () => {
     expect(angleDifferenceDegrees(10, 350)).toBeCloseTo(20, 6);
     expect(angleDifferenceDegrees(180, 175)).toBeCloseTo(5, 6);
+  });
+});
+
+describe('forceVectorsForPair', () => {
+  it('is equal and opposite for two charges', () => {
+    const { onLeft, onRight } = forceVectorsForPair({ x: 0, y: 0, q: 1 }, { x: 2, y: 0, q: 1 });
+    expect(onLeft.x).toBeCloseTo(-onRight.x, 10);
+    expect(onLeft.y).toBeCloseTo(-onRight.y, 10);
+    // like charges repel: left is pushed in -x, right in +x
+    expect(onLeft.x).toBeLessThan(0);
+    expect(onRight.x).toBeGreaterThan(0);
+  });
+
+  it('is zero when either charge is zero', () => {
+    const { onLeft, onRight } = forceVectorsForPair({ x: 0, y: 0, q: 0 }, { x: 2, y: 0, q: 3 });
+    expect(onLeft).toEqual({ x: 0, y: 0 });
+    expect(onRight).toEqual({ x: 0, y: 0 });
+  });
+});
+
+describe('scaleForceToPixels', () => {
+  it('scales linearly and clamps at maxPx', () => {
+    expect(scaleForceToPixels(0.5, 100, 90)).toBeCloseTo(50, 10);
+    expect(scaleForceToPixels(2, 100, 90)).toBe(90);
+    expect(scaleForceToPixels(0, 100, 90)).toBe(0);
+  });
+});
+
+describe('polarizationForce', () => {
+  it('attracts a neutral sphere toward a positive source (and induces charge)', () => {
+    const { force, induced } = polarizationForce({ x: 10, y: 0, q: 3 }, { x: 0, y: 0 }, 1);
+    expect(force.x).toBeGreaterThan(0); // toward the source
+    expect(force.y).toBeCloseTo(0, 10);
+    expect(induced).toBeGreaterThan(0);
+  });
+
+  it('attracts toward a negative source too (sign independent)', () => {
+    const { force } = polarizationForce({ x: 10, y: 0, q: -3 }, { x: 0, y: 0 }, 1);
+    expect(force.x).toBeGreaterThan(0); // still toward the source
+  });
+
+  it('weakens as the source moves farther away', () => {
+    const near = polarizationForce({ x: 6, y: 0, q: 3 }, { x: 0, y: 0 }, 1);
+    const far = polarizationForce({ x: 12, y: 0, q: 3 }, { x: 0, y: 0 }, 1);
+    expect(magnitude(near.force)).toBeGreaterThan(magnitude(far.force));
+  });
+
+  it('is zero when the source is at or inside the sphere', () => {
+    expect(polarizationForce({ x: 0.5, y: 0, q: 3 }, { x: 0, y: 0 }, 1)).toEqual({ force: { x: 0, y: 0 }, induced: 0 });
   });
 });

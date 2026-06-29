@@ -1,0 +1,21 @@
+{
+  "problemId": "cci-share-identical-spheres",
+  "lessonId": "charging-conductors-insulators",
+  "unitId": "electrostatics",
+  "skillIds": ["charging-conductors-insulators"],
+  "principleIds": ["conductor-equilibrium"],
+  "misconceptionTags": ["charge-sharing-omitted"],
+  "kind": "single",
+  "difficulty": 4,
+  "difficultyBand": 4,
+  "difficultyFeatures": {
+    "steps": 4,
+    "symbolic": false,
+    "calculus": false,
+    "multiPart": false,
+    "hasTrap": true
+  },
+  "provenance": "authored",
+  "title": "Sharing charge between identical spheres",
+  "prompt": "Two identical isolated metal spheres sit far apart. Sphere A carries +8.0 nC and sphere B is neutral. The spheres are briefly touched together and then separated. Find the charge on each sphere afterward."
+}

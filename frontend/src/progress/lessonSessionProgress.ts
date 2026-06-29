@@ -124,12 +124,3 @@ export function mergeLessonStep(
     [lessonId]: { stepIndex: nextStepIndex, maxVisitedStepIndex: nextMaxVisited },
   };
 }
-
-export function removeLessonSession(sessions: LessonSessionState, lessonId: string): LessonSessionState {
-  if (!(lessonId in sessions)) {
-    return sessions;
-  }
-
-  const { [lessonId]: _removed, ...rest } = sessions;
-  return rest;
-}

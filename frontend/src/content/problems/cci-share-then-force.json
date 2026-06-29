@@ -1,0 +1,26 @@
+{
+  "problemId": "cci-share-then-force",
+  "lessonId": "charging-conductors-insulators",
+  "unitId": "electrostatics",
+  "skillIds": ["charging-conductors-insulators", "coulombs-law"],
+  "principleIds": ["conductor-equilibrium", "coulomb-force"],
+  "misconceptionTags": ["charge-sharing-omitted", "inverse-square-error"],
+  "kind": "synthesis",
+  "difficulty": 5,
+  "difficultyBand": 5,
+  "difficultyFeatures": {
+    "steps": 5,
+    "symbolic": false,
+    "calculus": false,
+    "multiPart": true,
+    "hasTrap": true
+  },
+  "provenance": "authored",
+  "title": "Share the charge, then find the force",
+  "prompt": "Two identical small metal spheres carry +6.0 nC and +2.0 nC. They are briefly touched together, then placed 0.10 m apart. Find the magnitude of the electric force between them. Use k = 8.99e9 N m^2/C^2.",
+  "givens": [
+    { "label": "q on sphere A", "value": "+6.0 nC" },
+    { "label": "q on sphere B", "value": "+2.0 nC" },
+    { "label": "r after separating", "value": "0.10 m" }
+  ]
+}

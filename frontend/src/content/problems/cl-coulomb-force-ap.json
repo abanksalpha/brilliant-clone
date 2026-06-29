@@ -1,0 +1,26 @@
+{
+  "problemId": "cl-coulomb-force-ap",
+  "lessonId": "coulombs-law",
+  "unitId": "electrostatics",
+  "skillIds": ["coulombs-law"],
+  "principleIds": ["coulomb-force"],
+  "misconceptionTags": ["inverse-square-error"],
+  "kind": "single",
+  "difficulty": 4,
+  "difficultyBand": 4,
+  "difficultyFeatures": {
+    "steps": 4,
+    "symbolic": false,
+    "calculus": false,
+    "multiPart": false,
+    "hasTrap": true
+  },
+  "provenance": "authored",
+  "title": "Force between two charged spheres",
+  "prompt": "Two small spheres carry charges of +45 nanocoulomb and -28 nanocoulomb and are held 3.0 cm apart. Find the magnitude of the electric force between them. Use k = 8.99e9 N m^2/C^2.",
+  "givens": [
+    { "label": "q_1", "value": "+45 nanocoulomb" },
+    { "label": "q_2", "value": "-28 nanocoulomb" },
+    { "label": "r", "value": "3.0 cm" }
+  ]
+}

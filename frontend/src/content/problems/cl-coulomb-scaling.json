@@ -1,0 +1,21 @@
+{
+  "problemId": "cl-coulomb-scaling",
+  "lessonId": "coulombs-law",
+  "unitId": "electrostatics",
+  "skillIds": ["coulombs-law"],
+  "principleIds": ["coulomb-force"],
+  "misconceptionTags": ["inverse-square-error", "force-distance-direction-error"],
+  "kind": "single",
+  "difficulty": 4,
+  "difficultyBand": 4,
+  "difficultyFeatures": {
+    "steps": 3,
+    "symbolic": true,
+    "calculus": false,
+    "multiPart": false,
+    "hasTrap": true
+  },
+  "provenance": "authored",
+  "title": "Scaling the Coulomb force",
+  "prompt": "Two point charges separated by a distance r exert a force of 0.080 N on each other. The charges are unchanged, but the separation is reduced to one third of r. Find the new magnitude of the force between them."
+}

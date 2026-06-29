@@ -1,43 +1,15 @@
-import { useRef } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { LessonPlayer } from '../components/lesson/LessonPlayer';
-import { getLessonById } from '../content';
+import { LessonSession } from '../components/lesson/LessonSession';
+import { LoadingScreen } from '../components/shell/LoadingScreen';
+import { getLessonModule } from '../content';
 import { useProgress } from '../progress/ProgressContext';
 
 export function LessonPage() {
   const { lessonId } = useParams();
-  const lesson = lessonId ? getLessonById(lessonId) : undefined;
-  const {
-    isLoading,
-    progress,
-    getLessonStepIndex,
-    getVisitedStepCount,
-    completeLesson,
-    answerQuestion,
-    setLessonStep,
-  } = useProgress();
+  const module = lessonId ? getLessonModule(lessonId) : undefined;
+  const { isLoading, getLessonPhase, setLessonPhase, completeLesson, answerQuestion } = useProgress();
 
-  // The resume position is captured once per lesson. Reading it live on every
-  // render would let a mid-session progress change (e.g. completeLesson clearing
-  // the session) flow back in as a fresh "initial" step and bounce the player
-  // back to step 1 instead of showing the completion screen.
-  const initialsRef = useRef<{ lessonId: string; stepIndex: number; visitedStepCount: number } | null>(null);
-
-  function handleLessonStepChange(activeLessonId: string, nextStepIndex: number, maxVisitedStepIndex?: number) {
-    const activeLesson = getLessonById(activeLessonId);
-    const totalSteps = activeLesson?.steps.length ?? 0;
-    setLessonStep(activeLessonId, nextStepIndex, totalSteps, maxVisitedStepIndex);
-  }
-
-  function handleLessonComplete(completedLessonId: string) {
-    return completeLesson(completedLessonId);
-  }
-
-  function handleQuestionAnswered(activeLessonId: string, stepNumber: number) {
-    return answerQuestion(activeLessonId, stepNumber);
-  }
-
-  if (!lesson) {
+  if (!module) {
     return (
       <main className="lesson-shell theme-handdrawn theme-handdrawn--lesson">
         <section className="panel lesson-missing">
@@ -53,42 +25,21 @@ export function LessonPage() {
   }
 
   if (isLoading) {
-    return (
-      <main className="lesson-shell theme-handdrawn theme-handdrawn--lesson">
-        <section className="panel lesson-loading">
-          <p className="eyebrow" role="status">
-            Loading…
-          </p>
-        </section>
-      </main>
-    );
+    return <LoadingScreen />;
   }
 
-  if (!initialsRef.current || initialsRef.current.lessonId !== lesson.lessonId) {
-    // A finished lesson is fully unlocked for review, so force every screen open
-    // regardless of the saved session's furthest-visited step. The session is now
-    // kept on completion, so the resumed step below is the page last seen.
-    const isCompleted = progress.completedLessonIds.includes(lesson.lessonId);
-    initialsRef.current = {
-      lessonId: lesson.lessonId,
-      stepIndex: getLessonStepIndex(lesson.lessonId, lesson.steps.length),
-      visitedStepCount: isCompleted
-        ? lesson.steps.length
-        : getVisitedStepCount(lesson.lessonId, lesson.steps.length),
-    };
-  }
-  const { stepIndex: initialStepIndex, visitedStepCount: initialVisitedStepCount } = initialsRef.current;
+  // Resume position is read once here; LessonSession captures it on mount so a
+  // mid-lesson phase change does not bounce the learner back to the start.
+  const { phase, within } = getLessonPhase(module.lessonId);
 
   return (
-    <main className="lesson-shell theme-handdrawn theme-handdrawn--lesson">
-      <LessonPlayer
-        initialStepIndex={initialStepIndex}
-        initialVisitedStepCount={initialVisitedStepCount}
-        lesson={lesson}
-        onLessonComplete={handleLessonComplete}
-        onQuestionAnswered={handleQuestionAnswered}
-        onStepChange={handleLessonStepChange}
-      />
-    </main>
+    <LessonSession
+      module={module}
+      initialPhase={phase}
+      initialWithin={within}
+      onPhaseChange={(nextPhase, nextWithin) => setLessonPhase(module.lessonId, nextPhase, nextWithin)}
+      onLessonComplete={() => completeLesson(module.lessonId)}
+      onQuestionAnswered={(stepNumber) => answerQuestion(module.lessonId, stepNumber)}
+    />
   );
 }

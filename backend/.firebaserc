@@ -1,5 +1,6 @@
 {
   "projects": {
-    "default": "buzzilliant"
+    "default": "apt-final-74a83",
+    "buzzilliant": "buzzilliant"
   }
 }

@@ -1,0 +1,26 @@
+{
+  "problemId": "eff-field-probe-invariance",
+  "lessonId": "electric-field-field-lines",
+  "unitId": "electrostatics",
+  "skillIds": ["electric-field-field-lines"],
+  "principleIds": ["field-concept"],
+  "misconceptionTags": ["field-scales-with-probe", "field-probe-force-unchanged"],
+  "kind": "single",
+  "difficulty": 4,
+  "difficultyBand": 4,
+  "difficultyFeatures": {
+    "steps": 4,
+    "symbolic": false,
+    "calculus": false,
+    "multiPart": false,
+    "hasTrap": true
+  },
+  "provenance": "authored",
+  "title": "A bigger probe at the same point",
+  "prompt": "A +1.0 microcoulomb test charge placed at a point feels an electric force of 0.050 N. The test charge is removed and a +3.0 microcoulomb charge is placed at the same point. Find the magnitude of the electric force on the +3.0 microcoulomb charge.",
+  "givens": [
+    { "label": "first test charge", "value": "+1.0 microcoulomb" },
+    { "label": "force on first charge", "value": "0.050 N" },
+    { "label": "second charge", "value": "+3.0 microcoulomb" }
+  ]
+}

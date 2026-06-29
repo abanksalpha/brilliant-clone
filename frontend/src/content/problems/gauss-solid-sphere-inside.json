@@ -1,0 +1,20 @@
+{
+  "problemId": "gauss-solid-sphere-inside",
+  "lessonId": "gausss-law",
+  "unitId": "electrostatics",
+  "skillIds": ["gausss-law"],
+  "principleIds": ["symmetry-gauss", "field-concept"],
+  "misconceptionTags": ["inside-uses-point", "inside-assumes-zero"],
+  "kind": "single",
+  "difficulty": 5,
+  "difficultyBand": 5,
+  "difficultyFeatures": { "steps": 4, "symbolic": false, "calculus": false, "multiPart": false, "hasTrap": true },
+  "provenance": "authored",
+  "title": "Field inside a solid charged sphere",
+  "prompt": "A solid sphere of radius 0.10 m carries a charge of +12 nC spread uniformly through its volume. Find the magnitude of the electric field at a point 0.050 m from the center. Use k = 8.99e9 N m^2/C^2.",
+  "givens": [
+    { "label": "total charge Q", "value": "+12 nC" },
+    { "label": "sphere radius R", "value": "0.10 m" },
+    { "label": "distance from center r", "value": "0.050 m" }
+  ]
+}

@@ -7,15 +7,19 @@ type ProblemSetCompleteProps = {
   solved: number;
   total: number;
   onBack: () => void;
+  // Whether to burst confetti on mount. Off inside a lesson, where the only
+  // end-of-lesson celebration is the single lesson-complete burst, so finishing
+  // the Review or Solve set does not double up or fire mid-lesson.
+  celebrateOnMount?: boolean;
 };
 
 // Mirrors the lesson's end screen (same complete-* classes and shell) so the
 // problem set finishes on a celebration card instead of snapping back to the
 // dashboard. The back action is owned by the caller through onBack.
-export function ProblemSetComplete({ title, solved, total, onBack }: ProblemSetCompleteProps) {
+export function ProblemSetComplete({ title, solved, total, onBack, celebrateOnMount = true }: ProblemSetCompleteProps) {
   useEffect(() => {
-    celebrate();
-  }, []);
+    if (celebrateOnMount) celebrate();
+  }, [celebrateOnMount]);
 
   return (
     <section className="lesson-player lesson-complete" aria-labelledby="problem-set-complete-title">

@@ -1,0 +1,26 @@
+{
+  "problemId": "mech-forces-incline",
+  "lessonId": "mechanics-forces",
+  "unitId": "mechanics",
+  "skillIds": ["mechanics-forces"],
+  "principleIds": ["mechanics-newtons-laws"],
+  "misconceptionTags": ["incline-component-error"],
+  "kind": "single",
+  "difficulty": 4,
+  "difficultyBand": 4,
+  "difficultyFeatures": {
+    "steps": 3,
+    "symbolic": false,
+    "calculus": false,
+    "multiPart": false,
+    "hasTrap": true
+  },
+  "provenance": "authored",
+  "title": "Net force on a block on a ramp",
+  "prompt": "A 2.0 kg block is released from rest on a frictionless ramp inclined at 30 degrees above the horizontal. Find the magnitude of the net force on the block along the ramp. Use g = 9.8 m/s^2.",
+  "givens": [
+    { "label": "m", "value": "2.0 kg" },
+    { "label": "angle", "value": "30 degrees" },
+    { "label": "surface", "value": "frictionless" }
+  ]
+}

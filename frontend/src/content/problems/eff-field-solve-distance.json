@@ -1,0 +1,25 @@
+{
+  "problemId": "eff-field-solve-distance",
+  "lessonId": "electric-field-field-lines",
+  "unitId": "electrostatics",
+  "skillIds": ["electric-field-field-lines"],
+  "principleIds": ["field-concept"],
+  "misconceptionTags": ["field-solve-omits-sqrt"],
+  "kind": "single",
+  "difficulty": 4,
+  "difficultyBand": 4,
+  "difficultyFeatures": {
+    "steps": 4,
+    "symbolic": true,
+    "calculus": false,
+    "multiPart": false,
+    "hasTrap": true
+  },
+  "provenance": "authored",
+  "title": "Distance for a given field",
+  "prompt": "A +2.0 microcoulomb point charge produces an electric field of magnitude 5.0e5 N/C at some distance from it. Find that distance. Use k = 8.99e9 N m^2/C^2.",
+  "givens": [
+    { "label": "Q", "value": "+2.0 microcoulomb" },
+    { "label": "E", "value": "5.0e5 N/C" }
+  ]
+}

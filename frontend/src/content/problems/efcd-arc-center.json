@@ -1,0 +1,26 @@
+{
+  "problemId": "efcd-arc-center",
+  "lessonId": "electric-fields-of-charge-distributions",
+  "unitId": "electrostatics",
+  "skillIds": ["electric-fields-of-charge-distributions"],
+  "principleIds": ["field-concept", "superposition"],
+  "misconceptionTags": ["distribution-as-point", "arc-omits-factor-2"],
+  "kind": "single",
+  "difficulty": 4,
+  "difficultyBand": 4,
+  "difficultyFeatures": {
+    "steps": 4,
+    "symbolic": false,
+    "calculus": true,
+    "multiPart": false,
+    "hasTrap": true
+  },
+  "provenance": "authored",
+  "title": "Field at the center of a charged arc",
+  "prompt": "A semicircular arc of radius 0.050 m carries a uniformly distributed charge of +6.0 nC. Find the magnitude of the electric field at the center of the arc. Use k = 8.99e9 N m^2/C^2.",
+  "givens": [
+    { "label": "arc charge Q", "value": "+6.0 nC" },
+    { "label": "arc radius R", "value": "0.050 m" },
+    { "label": "shape", "value": "a semicircle" }
+  ]
+}

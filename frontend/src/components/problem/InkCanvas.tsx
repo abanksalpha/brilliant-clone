@@ -1,4 +1,4 @@
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef } from 'react';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef } from 'react';
 import { eraseHitTest, segmentStrokesIntoLines, strokeBBox } from './inkGeometry';
 import type { BBox, InkLine, InkPoint, Stroke } from './inkGeometry';
 import { clampViewport, fitToContent, panBy, screenToWorld, zoomAbout, type Viewport } from './inkViewport';
@@ -374,7 +374,9 @@ export const InkCanvas = forwardRef<InkCanvasHandle, InkCanvasProps>(function In
 
   // Size both layers to the container with devicePixelRatio scaling, and keep
   // them in sync on resize. Resizing clears the bitmap, so we repaint after.
-  useEffect(() => {
+  // Size the canvas before paint so a remount never shows an unsized frame that
+  // then snaps to full size (a visible settle of the board).
+  useLayoutEffect(() => {
     const stage = containerRef.current;
     const ink = inkRef.current;
     const overlay = overlayRef.current;

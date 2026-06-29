@@ -4,8 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { type ForwardedRef } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ProblemPlayer } from './ProblemPlayer';
-import { gradeAttempt, getHint, askQuestion, generateReviewProblem } from '../../lib/grading';
-import type { ReviewProblemResult } from '../../lib/grading';
+import { gradeAttempt, getHint, askQuestion } from '../../lib/grading';
 import { useProgress } from '../../progress/ProgressContext';
 import { PRINCIPLES } from '../../content/principles';
 import type { Problem } from '../../content/problems';
@@ -62,7 +61,6 @@ vi.mock('../../lib/grading', () => ({
   gradeAttempt: vi.fn(),
   getHint: vi.fn(),
   askQuestion: vi.fn(),
-  generateReviewProblem: vi.fn(),
 }));
 
 const recordProblemResult = vi.hoisted(() => vi.fn());
@@ -81,7 +79,6 @@ vi.mock('../../progress/ProgressContext', () => ({
 const mockedGrade = vi.mocked(gradeAttempt);
 const mockedHint = vi.mocked(getHint);
 const mockedAsk = vi.mocked(askQuestion);
-const mockedGenerateReview = vi.mocked(generateReviewProblem);
 
 const problems: Problem[] = [
   {
@@ -137,121 +134,6 @@ beforeEach(() => {
     recordNodeCatch,
     progress: { misconceptions: {}, misconceptionGraph: {} },
   } as unknown as ReturnType<typeof useProgress>);
-});
-
-const reviewPlaceholder: Problem = {
-  problemId: 'review:mc:node1',
-  lessonId: 'coulombs-law',
-  unitId: 'electrostatics',
-  skillIds: [],
-  principleIds: ['field-concept'],
-  title: 'Review',
-  prompt: '',
-  misconceptionTags: [],
-  kind: 'single',
-  difficulty: 4,
-  difficultyBand: 4,
-  difficultyFeatures: { steps: 4, symbolic: false, calculus: false, multiPart: false, hasTrap: true },
-  provenance: 'synthesis',
-  targetMisconceptionNodeId: 'mc:node1',
-  pendingReview: {
-    nodeId: 'mc:node1',
-    wrongBelief: 'field falls off linearly with distance',
-    principleId: 'field-concept',
-    difficultyBand: 4,
-  },
-};
-
-const generatedReview: ReviewProblemResult = {
-  problemId: 'syn:gen-1',
-  statement: 'A fresh review problem about the inverse square law.',
-  skillIds: ['coulombs-law'],
-  principleIds: ['field-concept'],
-  misconceptionTags: ['inverse-square-error'],
-  difficultyBand: 4,
-  targetMisconceptionNodeId: 'mc:node1',
-};
-
-describe('on-demand review generation', () => {
-  it('generates a review placeholder only when reached, showing a loading state first', async () => {
-    let resolveGen: (result: ReviewProblemResult) => void = () => {};
-    mockedGenerateReview.mockImplementation(
-      () =>
-        new Promise<ReviewProblemResult>((resolve) => {
-          resolveGen = resolve;
-        }),
-    );
-
-    render(
-      <MemoryRouter>
-        <ProblemPlayer problems={[reviewPlaceholder]} title="Problem set" />
-      </MemoryRouter>,
-    );
-
-    expect(await screen.findByText(/preparing this problem/i)).toBeInTheDocument();
-    expect(mockedGenerateReview).toHaveBeenCalledTimes(1);
-    expect(mockedGenerateReview).toHaveBeenCalledWith({
-      nodeId: 'mc:node1',
-      wrongBelief: 'field falls off linearly with distance',
-      principleId: 'field-concept',
-      difficultyBand: 4,
-    });
-
-    resolveGen(generatedReview);
-
-    expect(
-      await screen.findByText('A fresh review problem about the inverse square law.'),
-    ).toBeInTheDocument();
-  });
-
-  it('grades a materialized review problem against the generated key and credits its node', async () => {
-    mockedGenerateReview.mockResolvedValue(generatedReview);
-    mockedGrade.mockResolvedValue({
-      isCorrect: true,
-      transcribedSteps: ['ok'],
-      firstErrorLineId: null,
-      misconceptionId: null,
-      explanation: 'Right.',
-      correctSolution: ['done'],
-    });
-
-    const user = userEvent.setup();
-    render(
-      <MemoryRouter>
-        <ProblemPlayer problems={[reviewPlaceholder]} title="Problem set" />
-      </MemoryRouter>,
-    );
-
-    await screen.findByText('A fresh review problem about the inverse square law.');
-    await user.click(screen.getByRole('button', { name: /check work/i }));
-
-    expect(await screen.findByText(/solved/i)).toBeInTheDocument();
-    // Graded against the freshly generated key, not the stable placeholder id.
-    expect(mockedGrade).toHaveBeenCalledWith(expect.objectContaining({ problemId: 'syn:gen-1' }));
-    // Solving a targeted review problem credits a spaced catch on its node.
-    expect(recordNodeCatch).toHaveBeenCalledWith('mc:node1');
-  });
-
-  it('shows a retryable error and does not fabricate a problem when generation fails', async () => {
-    mockedGenerateReview.mockRejectedValueOnce(new Error('backend unavailable'));
-
-    render(
-      <MemoryRouter>
-        <ProblemPlayer problems={[reviewPlaceholder]} title="Problem set" />
-      </MemoryRouter>,
-    );
-
-    expect(await screen.findByText(/could not load problem/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
-
-    mockedGenerateReview.mockResolvedValueOnce(generatedReview);
-    const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: /retry/i }));
-
-    expect(
-      await screen.findByText('A fresh review problem about the inverse square law.'),
-    ).toBeInTheDocument();
-  });
 });
 
 describe('ProblemPlayer', () => {
@@ -575,7 +457,7 @@ describe('ProblemPlayer', () => {
   it('credits a spaced catch once to the node a solved targeted problem aims at', async () => {
     const user = userEvent.setup();
     const targeted: Problem[] = [
-      { ...problems[0], problemId: 'pt', targetMisconceptionNodeId: 'mc:demo' },
+      { ...problems[0], problemId: 'pt', targetMisconceptionNodeIds: ['mc:demo'] },
     ];
     mockedGrade
       .mockResolvedValueOnce({
@@ -610,6 +492,37 @@ describe('ProblemPlayer', () => {
     expect(await screen.findByText('Square the distance')).toBeInTheDocument();
     expect(recordNodeCatch).toHaveBeenCalledTimes(1);
     expect(recordNodeCatch).toHaveBeenCalledWith('mc:demo');
+  });
+
+  it('credits a spaced catch once to every node a multi-target solved problem traps', async () => {
+    const user = userEvent.setup();
+    // A generated problem can trap more than one belief; a correct solve must
+    // credit a catch on each targeted node so spaced mastery advances on all.
+    const targeted: Problem[] = [
+      { ...problems[0], problemId: 'pt-multi', targetMisconceptionNodeIds: ['a', 'b'] },
+    ];
+    mockedGrade.mockResolvedValue({
+      isCorrect: true,
+      transcribedSteps: ['E = kq/r^2'],
+      firstErrorLineId: null,
+      misconceptionId: null,
+      explanation: 'Looks right.',
+      correctSolution: ['Square the distance'],
+    });
+
+    render(
+      <MemoryRouter>
+        <ProblemPlayer problems={targeted} title="Review" />
+      </MemoryRouter>,
+    );
+
+    await user.click(screen.getByRole('button', { name: /check work/i }));
+    expect(await screen.findByText('Square the distance')).toBeInTheDocument();
+
+    // Both targeted nodes are credited, each exactly once.
+    expect(recordNodeCatch).toHaveBeenCalledTimes(2);
+    expect(recordNodeCatch).toHaveBeenCalledWith('a');
+    expect(recordNodeCatch).toHaveBeenCalledWith('b');
   });
 
   it('does not credit a node catch when the solved problem carries no target', async () => {
@@ -730,22 +643,41 @@ describe('ProblemPlayer', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
-  it('requests a hint and escalates the tier on a second request', async () => {
+  it('requests a hint with the student work and asks for a deeper follow-up that stacks below the first', async () => {
     const user = userEvent.setup();
     mockedHint
-      .mockResolvedValueOnce({ tier: 0, text: 'Start from Coulomb law.', targetLineId: null })
-      .mockResolvedValueOnce({ tier: 1, text: 'Square the distance.', targetLineId: 'line-1' });
+      .mockResolvedValueOnce({ level: 0, text: 'Start from Coulomb law.', targetLineId: null })
+      .mockResolvedValueOnce({ level: 1, text: 'Square the distance.', targetLineId: 'line-1' });
 
     renderPlayer();
     await user.click(screen.getByRole('button', { name: /need a hint/i }));
 
     expect(await screen.findByText('Start from Coulomb law.')).toBeInTheDocument();
-    expect(mockedHint).toHaveBeenNthCalledWith(1, expect.objectContaining({ problemId: 'p1', tier: 0 }));
+    // The hint reuses the exact same canvas snapshot a grade sends (the student's
+    // work image and detected ink lines) so the model can ground the hint in what
+    // the student actually wrote, plus the progressive level and prior hints.
+    expect(mockedHint).toHaveBeenNthCalledWith(1, {
+      problemId: 'p1',
+      imagePngBase64: 'cG5nLWRhdGE=',
+      lines: [{ id: 'line-1', bbox: { x: 1, y: 2, w: 3, h: 4 } }],
+      level: 0,
+      priorHints: [],
+    });
 
-    await user.click(screen.getByRole('button', { name: /need a hint/i }));
+    // The button now invites a follow-up, which goes one level deeper and carries
+    // the first hint so the model can build on it (still with the latest work).
+    await user.click(screen.getByRole('button', { name: /another hint/i }));
 
     expect(await screen.findByText('Square the distance.')).toBeInTheDocument();
-    expect(mockedHint).toHaveBeenNthCalledWith(2, expect.objectContaining({ problemId: 'p1', tier: 1 }));
+    // Both hints remain on screen, stacked.
+    expect(screen.getByText('Start from Coulomb law.')).toBeInTheDocument();
+    expect(mockedHint).toHaveBeenNthCalledWith(2, {
+      problemId: 'p1',
+      imagePngBase64: 'cG5nLWRhdGE=',
+      lines: [{ id: 'line-1', bbox: { x: 1, y: 2, w: 3, h: 4 } }],
+      level: 1,
+      priorHints: ['Start from Coulomb law.'],
+    });
   });
 
   it('asks the AI a free-form question and shows the transient answer', async () => {
@@ -784,5 +716,135 @@ describe('ProblemPlayer', () => {
     // The raw provider/internal error becomes clean copy; no fabricated answer.
     expect(await screen.findByText(/ai tutor ran into a problem/i)).toBeInTheDocument();
     expect(screen.queryByText(/ask exploded/)).not.toBeInTheDocument();
+  });
+
+  it('hides the within-set progress chrome and its exit when hideProgressChrome is set', () => {
+    render(
+      <MemoryRouter>
+        <ProblemPlayer problems={problems} title="Review" hideProgressChrome />
+      </MemoryRouter>,
+    );
+
+    // The blue/red SessionChrome bar, its per-problem jump buttons, and its exit
+    // are all gone; the lesson owns that chrome instead.
+    expect(screen.queryByRole('progressbar')).toBeNull();
+    expect(screen.queryByRole('button', { name: /go to screen/i })).toBeNull();
+    expect(screen.queryByRole('link', { name: /exit lesson/i })).toBeNull();
+    // The problem itself still renders.
+    expect(screen.getByText('First problem title')).toBeInTheDocument();
+  });
+
+  it('renders a retry for a failed slot and calls onRetrySlot with its display index', async () => {
+    const user = userEvent.setup();
+    const onRetrySlot = vi.fn();
+    // Slot 0 is ready, slot 1 failed (a hole), slot 2 is ready. Open on the failed
+    // slot so its retry control is on screen.
+    const sparse = [problems[0], undefined, problems[1]];
+
+    render(
+      <MemoryRouter>
+        <ProblemPlayer
+          problems={sparse}
+          title="Review"
+          expectedTotal={3}
+          hideProgressChrome
+          initialProblemIndex={1}
+          failedSlots={new Set([1])}
+          onRetrySlot={onRetrySlot}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId('problem-failed')).toBeInTheDocument();
+    // The first (ready) problem is not shown; the failed slot is.
+    expect(screen.queryByText('First problem title')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /try again/i }));
+    expect(onRetrySlot).toHaveBeenCalledWith(1);
+  });
+
+  it('offers a Skip on a failed slot when onSkip is provided (Review) and calls it', async () => {
+    const user = userEvent.setup();
+    const onSkip = vi.fn();
+    const sparse = [problems[0], undefined, problems[1]];
+
+    render(
+      <MemoryRouter>
+        <ProblemPlayer
+          problems={sparse}
+          title="Review"
+          expectedTotal={3}
+          hideProgressChrome
+          initialProblemIndex={1}
+          failedSlots={new Set([1])}
+          onRetrySlot={vi.fn()}
+          onSkip={onSkip}
+        />
+      </MemoryRouter>,
+    );
+
+    await user.click(screen.getByRole('button', { name: /skip review/i }));
+    expect(onSkip).toHaveBeenCalledTimes(1);
+  });
+
+  it('omits the Skip control on a failed slot when onSkip is absent (Solve)', () => {
+    const sparse = [problems[0], undefined];
+
+    render(
+      <MemoryRouter>
+        <ProblemPlayer
+          problems={sparse}
+          title="Solve"
+          expectedTotal={2}
+          hideProgressChrome
+          initialProblemIndex={1}
+          failedSlots={new Set([1])}
+          onRetrySlot={vi.fn()}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId('problem-failed')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /skip review/i })).not.toBeInTheDocument();
+  });
+
+  it('shows a generating state for a not-yet-ready slot that has not failed', () => {
+    const sparse = [problems[0], undefined];
+
+    render(
+      <MemoryRouter>
+        <ProblemPlayer
+          problems={sparse}
+          title="Review"
+          expectedTotal={2}
+          hideProgressChrome
+          initialProblemIndex={1}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId('problem-pending')).toBeInTheDocument();
+    expect(screen.getByText(/generating the next problem/i)).toBeInTheDocument();
+    expect(screen.queryByTestId('problem-failed')).not.toBeInTheDocument();
+  });
+
+  it('reports the active problem index on mount and on navigation', async () => {
+    const user = userEvent.setup();
+    const onProblemIndexChange = vi.fn();
+    render(
+      <MemoryRouter>
+        <ProblemPlayer
+          problems={problems}
+          title="Review"
+          onProblemIndexChange={onProblemIndexChange}
+        />
+      </MemoryRouter>,
+    );
+
+    // Fires on mount with the first problem and the set size.
+    expect(onProblemIndexChange).toHaveBeenLastCalledWith(0, 2);
+
+    await user.click(screen.getByRole('button', { name: /go to screen 2/i }));
+    expect(onProblemIndexChange).toHaveBeenLastCalledWith(1, 2);
   });
 });

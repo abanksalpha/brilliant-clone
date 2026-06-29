@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import {
   ArrowRight,
   Check,
@@ -19,6 +20,7 @@ import {
   X,
 } from 'lucide-react';
 import { SessionChrome } from '../lesson/session/SessionChrome';
+import { MathText } from '../lesson/RichText';
 import { FloatingWindow } from './FloatingWindow';
 import PdfViewer from './PdfViewer';
 import { ProblemSetComplete } from './ProblemSetComplete';
@@ -29,11 +31,11 @@ import {
   gradeAttempt,
   getHint,
   askQuestion,
-  generateReviewProblem,
   type GradeInput,
   type GradeResult,
   type HintResult,
 } from '../../lib/grading';
+import { celebrateSmall } from '../../lib/confetti';
 import { useProgress } from '../../progress/ProgressContext';
 import { knownSignatures } from '../../mastery/misconceptionGraph';
 import { PRINCIPLES } from '../../content/principles';
@@ -44,7 +46,7 @@ import type {
   ProblemWork,
 } from '../../progress/problemSessionProgress';
 
-type Phase = 'solving' | 'grading' | 'incorrect' | 'correct' | 'error' | 'generating' | 'genError';
+type Phase = 'solving' | 'grading' | 'incorrect' | 'correct' | 'error';
 
 // Everything that makes one problem's working state. Snapshotted when the
 // student leaves a problem and restored when they return, so handwriting and
@@ -54,10 +56,8 @@ type Session = {
   viewport: Viewport;
   phase: Phase;
   attempts: number;
-  hintTier: 0 | 1 | 2;
-  hintsUsed: number;
+  hints: HintResult[];
   result: GradeResult | null;
-  hint: HintResult | null;
   hintError: string | null;
   gradeError: string | null;
   recorded: boolean;
@@ -79,10 +79,8 @@ function workFromSession(session: Session): ProblemWork {
     viewport: session.viewport,
     phase: persistablePhase(session.phase),
     attempts: session.attempts,
-    hintTier: session.hintTier,
-    hintsUsed: session.hintsUsed,
+    hints: session.hints,
     result: session.result,
-    hint: session.hint,
     recorded: session.recorded,
   };
 }
@@ -93,10 +91,8 @@ function sessionFromWork(work: ProblemWork): Session {
     viewport: work.viewport,
     phase: work.phase,
     attempts: work.attempts,
-    hintTier: work.hintTier,
-    hintsUsed: work.hintsUsed,
+    hints: work.hints,
     result: work.result,
-    hint: work.hint,
     hintError: null,
     gradeError: null,
     recorded: work.recorded,
@@ -119,10 +115,16 @@ type Seed = {
   current: Session | null;
 };
 
-function computeSeed(initial: ProblemSetSession | null | undefined, problems: Problem[]): Seed {
+function computeSeed(
+  initial: ProblemSetSession | null | undefined,
+  problems: (Problem | undefined)[],
+  startIndexOverride?: number,
+): Seed {
   const total = problems.length;
+  const hasOverride = startIndexOverride != null && Number.isFinite(startIndexOverride);
   if (!initial) {
-    return { index: 0, visited: 1, work: new Map(), solved: new Set(), current: null };
+    const index = hasOverride ? clampIndex(startIndexOverride!, total) : 0;
+    return { index, visited: Math.max(1, index + 1), work: new Map(), solved: new Set(), current: null };
   }
 
   const work = new Map<string, Session>();
@@ -130,21 +132,32 @@ function computeSeed(initial: ProblemSetSession | null | undefined, problems: Pr
     work.set(problemId, sessionFromWork(entry));
   }
 
-  const index = clampIndex(initial.index, total);
+  const index = hasOverride ? clampIndex(startIndexOverride!, total) : clampIndex(initial.index, total);
   const visited = Math.min(Math.max(initial.visitedCount, index + 1, 1), Math.max(total, 1));
   const current = work.get(problems[index]?.problemId ?? '') ?? null;
   // Keep only solved ids that belong to the set that actually resolved this load.
   // A resumed set can be smaller than when it was saved (rehydrate drops ids it
   // cannot rebuild, like a backend-only review problem), so an unfiltered solved
-  // set would over-count and show an impossible tally such as "7 of 6".
-  const problemIdSet = new Set(problems.map((problem) => problem.problemId));
+  // set would over-count and show an impossible tally such as "7 of 6". A
+  // progressively revealed set may also have holes (a slot still generating or
+  // failed), which carry no id.
+  const problemIdSet = new Set(
+    problems.filter((problem): problem is Problem => problem != null).map((problem) => problem.problemId),
+  );
   const solved = new Set([...initial.solvedProblemIds].filter((id) => problemIdSet.has(id)));
   return { index, visited, work, solved, current };
 }
 
 type ProblemPlayerProps = {
-  problems: Problem[];
+  // A slot-indexed view: each position is a ready Problem, or undefined when its
+  // slot is still generating or has failed. The lesson passes a sparse array so a
+  // failed/generating slot in the middle keeps every other slot at its position.
+  problems: (Problem | undefined)[];
   title?: string;
+  // Overrides the problem drawer's "Problem n of total" eyebrow. The Apply-phase
+  // worked ladder passes "Worked example N of M" so its single-problem rungs read
+  // as ladder rungs; Review/Solve omit it and keep the within-set count.
+  eyebrow?: string;
   onAllComplete?: () => void;
   // Optional persistence: the saved set state to resume from, a sink to report
   // the latest state to, and a way to drop it once the set is finished. When
@@ -156,6 +169,41 @@ type ProblemPlayerProps = {
   // page uses it to mark the set complete (which gates the next lesson), separate
   // from onAllComplete (navigation) and onSessionClear (dropping the resume state).
   onComplete?: () => void;
+  // The lesson hides this player's own within-set progress bar (the blue/red
+  // "N / N" SessionChrome) because the lesson's PhaseBar already shows that
+  // granularity. The exit control moves to the lesson chrome alongside it.
+  hideProgressChrome?: boolean;
+  // Reports the current problem index (and set size) up to the lesson so the
+  // PhaseBar can show within-Review / within-Solve granularity. Fires on mount
+  // and whenever the active problem changes.
+  onProblemIndexChange?: (index: number, total: number) => void;
+  // The problem index to open on, overriding the resumed session's saved index.
+  // The lesson's PhaseBar uses it (with a remount) to jump straight to a chosen
+  // subpart in dev / free-navigation mode. Read once on mount.
+  initialProblemIndex?: number;
+  // Extra reference content rendered inside the left problem drawer, below the
+  // statement. The Apply completion rung uses it for its "worked so far" steps so
+  // the whiteboard still fills the screen instead of being pushed down by a card.
+  drawerPreface?: ReactNode;
+  // During progressive reveal the set streams in over time, so this is the count
+  // the player displays and treats as the real length. It keeps a partially
+  // arrived set from finishing early. Defaults to problems.length.
+  expectedTotal?: number;
+  // Whether the set-complete screen bursts confetti. Defaults on for a standalone
+  // set; the lesson passes false so its only celebrations are a correct answer,
+  // first reaching Learn, and finishing the whole lesson.
+  celebrateOnComplete?: boolean;
+  // Display indices whose slot failed all generation attempts. A failed position
+  // shows a retry instead of a never-ending "Generating..." state, so a slot is
+  // always ready, visibly generating, or visibly retryable.
+  failedSlots?: Set<number>;
+  // Regenerate the slot shown at the given display index. The lesson maps the
+  // index back to the plan slot and regenerates just that one.
+  onRetrySlot?: (index: number) => void;
+  // Escape hatch shown on a failed slot for a formative set (Review): advances past
+  // the whole set so a persistently failing slot can never trap the learner. Solve
+  // omits it, so each generated Solve problem must eventually succeed.
+  onSkip?: () => void;
 };
 
 // Turn a boundary error into a short, student-friendly message. Provider errors
@@ -192,11 +240,21 @@ function toErrorMessage(error: unknown): string {
 export function ProblemPlayer({
   problems,
   title,
+  eyebrow,
   onAllComplete,
   initialSession,
   onSessionChange,
   onSessionClear,
   onComplete,
+  hideProgressChrome,
+  onProblemIndexChange,
+  initialProblemIndex,
+  drawerPreface,
+  expectedTotal,
+  celebrateOnComplete = true,
+  failedSlots,
+  onRetrySlot,
+  onSkip,
 }: ProblemPlayerProps) {
   const inkRef = useRef<InkCanvasHandle>(null);
   const { progress, recordProblemResult, recordConceptMiss, recordNodeCatch } = useProgress();
@@ -205,7 +263,7 @@ export function ProblemPlayer({
   // it, so reopening a set lands on the saved problem with the saved work.
   const seedRef = useRef<Seed | null>(null);
   if (seedRef.current === null) {
-    seedRef.current = computeSeed(initialSession, problems);
+    seedRef.current = computeSeed(initialSession, problems, initialProblemIndex);
   }
   const seed = seedRef.current;
 
@@ -226,10 +284,10 @@ export function ProblemPlayer({
   const [solvedIds, setSolvedIds] = useState<Set<string>>(() => new Set(seed.solved));
   const [phase, setPhase] = useState<Phase>(seed.current?.phase ?? 'solving');
   const [attempts, setAttempts] = useState(seed.current?.attempts ?? 0);
-  const [hintTier, setHintTier] = useState<0 | 1 | 2>(seed.current?.hintTier ?? 0);
-  const [hintsUsed, setHintsUsed] = useState(seed.current?.hintsUsed ?? 0);
+  // The escalating hints given so far. Its length is the next hint's level and
+  // the count of hints used; there is no ceiling.
+  const [hints, setHints] = useState<HintResult[]>(seed.current?.hints ?? []);
   const [result, setResult] = useState<GradeResult | null>(seed.current?.result ?? null);
-  const [hint, setHint] = useState<HintResult | null>(seed.current?.hint ?? null);
   const [hintPending, setHintPending] = useState(false);
   const [hintError, setHintError] = useState<string | null>(null);
   const [gradeError, setGradeError] = useState<string | null>(null);
@@ -255,37 +313,30 @@ export function ProblemPlayer({
   // concept error for the same problem must not log a second miss to the graph.
   const conceptRecordedRef = useRef(false);
 
-  // Review-slot placeholders are generated on demand when the student reaches
-  // them, never up front. A materialized review problem is kept here keyed by its
-  // stable placeholder id, so navigating back to it does not regenerate.
-  const [materialized, setMaterialized] = useState<Map<string, Problem>>(new Map());
-  const materializedRef = useRef(materialized);
-  materializedRef.current = materialized;
-  // Bumped to retry a failed on-demand generation; the generation effect re-runs.
-  const [genAttempt, setGenAttempt] = useState(0);
-  const [genError, setGenError] = useState<string | null>(null);
-
-  const rawProblem = problems[index];
-  // What the student actually sees and is graded on: the materialized version
-  // once a review placeholder has been generated, otherwise the raw set entry.
-  // Its problemId is the stable placeholder id either way, so set order, the
-  // progress segments, and resume never shift across the lazy generation.
-  const problem = (rawProblem && materialized.get(rawProblem.problemId)) || rawProblem;
-  const total = problems.length;
+  const problem = problems[index];
+  // During progressive reveal the set streams in, so use the expected length for
+  // the count and completion check; a partially arrived set must not finish early.
+  const total = Math.max(problems.length, expectedTotal ?? problems.length);
 
   // Mirrors of render state so the save-on-change effect and the unmount handler
   // can read the latest values without being torn down and rebuilt each change.
   const indexRef = useRef(index);
   const visitedRef = useRef(visitedCount);
   const doneRef = useRef(done);
-  const metaRef = useRef({ phase, attempts, hintTier, hintsUsed, result, hint, recorded: recordedRef.current });
+  const metaRef = useRef({ phase, attempts, hints, result, recorded: recordedRef.current });
   indexRef.current = index;
   visitedRef.current = visitedCount;
   doneRef.current = done;
-  metaRef.current = { phase, attempts, hintTier, hintsUsed, result, hint, recorded: recordedRef.current };
+  metaRef.current = { phase, attempts, hints, result, recorded: recordedRef.current };
 
   const hydratedCanvasRef = useRef(false);
   const reportedOnceRef = useRef(false);
+
+  // Report the active problem index up to the lesson PhaseBar. Held in a ref so a
+  // changing callback identity never refires the effect; it fires on mount and
+  // whenever the index or set size changes.
+  const onProblemIndexChangeRef = useRef(onProblemIndexChange);
+  onProblemIndexChangeRef.current = onProblemIndexChange;
 
   // The current problem's live handwriting and view, mirrored out of the canvas
   // via its change callbacks. React detaches the canvas ref before this player's
@@ -307,10 +358,8 @@ export function ProblemPlayer({
         viewport: ink ? ink.getViewport() : liveViewportRef.current,
         phase: meta.phase,
         attempts: meta.attempts,
-        hintTier: meta.hintTier,
-        hintsUsed: meta.hintsUsed,
+        hints: meta.hints,
         result: meta.result,
-        hint: meta.hint,
         hintError: null,
         gradeError: null,
         recorded: meta.recorded,
@@ -319,18 +368,13 @@ export function ProblemPlayer({
 
     const work: Record<string, ProblemWork> = {};
     for (const [problemId, session] of sessionsRef.current) {
-      // A review problem regenerates on demand each load, so persisting its
-      // handwriting or solved state would attach it to a different generated
-      // problem on resume. Keep review placeholders out of the saved session;
-      // their slot is rebuilt from the set's problemIds and regenerated on reach.
-      if (problemId.startsWith('review:')) continue;
       work[problemId] = workFromSession(session);
     }
     return {
       index: indexRef.current,
       visitedCount: visitedRef.current,
-      solvedProblemIds: [...solvedIds].filter((id) => !id.startsWith('review:')),
-      problemIds: problems.map((entry) => entry.problemId),
+      solvedProblemIds: [...solvedIds],
+      problemIds: problems.filter((entry): entry is Problem => entry != null).map((entry) => entry.problemId),
       work,
     };
   }
@@ -356,9 +400,12 @@ export function ProblemPlayer({
     }, 700);
   };
 
-  // Load the resumed problem's handwriting into the canvas once after mount. The
-  // guard keeps later index changes (navigation) from re-running it.
-  useEffect(() => {
+  // Load the resumed problem's handwriting into the canvas before paint, so a
+  // remount (e.g. a same-phase subpart jump) shows the board at its saved view
+  // and strokes on the first frame instead of flashing the default view and then
+  // snapping to it (the vertical "slide"). The guard keeps later index changes
+  // (navigation) from re-running it.
+  useLayoutEffect(() => {
     if (hydratedCanvasRef.current) return;
     hydratedCanvasRef.current = true;
     const work = sessionsRef.current.get(problems[index]?.problemId ?? '');
@@ -367,6 +414,10 @@ export function ProblemPlayer({
     inkRef.current?.setViewport(work.viewport);
     inkRef.current?.annotate(work.phase === 'incorrect' ? work.result?.firstErrorLineId ?? null : null);
   }, [index, problems]);
+
+  useEffect(() => {
+    onProblemIndexChangeRef.current?.(index, total);
+  }, [index, total]);
 
   // Persist whenever the durable state changes (navigation, grade, hint). The
   // first run is the just-hydrated state, so it is skipped to avoid a redundant
@@ -377,7 +428,7 @@ export function ProblemPlayer({
       return;
     }
     reportRef.current();
-  }, [index, visitedCount, phase, attempts, hintTier, hintsUsed, result, hint, solvedIds]);
+  }, [index, visitedCount, phase, attempts, hints, result, solvedIds]);
 
   // Flush the latest work whenever the player goes away: in-app navigation
   // (unmount), the tab being hidden or backgrounded (visibilitychange, e.g.
@@ -404,49 +455,6 @@ export function ProblemPlayer({
     };
   }, []);
 
-  // Generate a review-slot placeholder's real problem on demand, only once the
-  // student reaches it. Nothing is generated up front, so a problem the student
-  // never reaches is never generated. Break-loud: a failure shows a retryable
-  // error rather than fabricating a problem.
-  useEffect(() => {
-    const raw = problems[index];
-    if (!raw?.pendingReview) return;
-    if (materializedRef.current.has(raw.problemId)) return;
-    const pending = raw.pendingReview;
-    let cancelled = false;
-    setGenError(null);
-    setPhase('generating');
-    void (async () => {
-      try {
-        const generated = await generateReviewProblem(pending);
-        if (cancelled) return;
-        // Keep the stable placeholder problemId; grading targets the generated
-        // key via gradeId, so set order and progress never shift.
-        const full: Problem = {
-          ...raw,
-          skillIds: generated.skillIds,
-          principleIds: generated.principleIds,
-          misconceptionTags: generated.misconceptionTags,
-          difficulty: generated.difficultyBand,
-          difficultyBand: generated.difficultyBand,
-          prompt: generated.statement,
-          gradeId: generated.problemId,
-          targetMisconceptionNodeId: generated.targetMisconceptionNodeId,
-          pendingReview: undefined,
-        };
-        setMaterialized((prev) => new Map(prev).set(raw.problemId, full));
-        setPhase('solving');
-      } catch (error) {
-        if (cancelled) return;
-        setGenError(toErrorMessage(error));
-        setPhase('genError');
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [index, problems, genAttempt]);
-
   if (done) {
     return (
       <ProblemSetComplete
@@ -454,13 +462,55 @@ export function ProblemPlayer({
         solved={solvedIds.size}
         total={total}
         onBack={() => onAllComplete?.()}
+        celebrateOnMount={celebrateOnComplete}
       />
     );
   }
 
+  // A progressively revealed set may not have a problem at this index yet. The
+  // slot is in one of two states: failed all attempts (a retry in place) or still
+  // generating in the background (a brief pending state). There is no
+  // stuck-forever case: a failed slot is always visibly retryable.
   if (!problem) {
-    return null;
+    if (failedSlots?.has(index)) {
+      return (
+        <section className="problem-pending" data-testid="problem-failed">
+          <div className="problem-pending__content panel lesson-phase">
+            <p className="eyebrow">{eyebrow ?? title ?? 'Problem'}</p>
+            <p className="problem-prompt-pending">
+              We could not generate this problem. You can try again.
+            </p>
+            <div className="lesson-phase__actions">
+              <button type="button" className="secondary-button" onClick={() => onRetrySlot?.(index)}>
+                <RotateCcw size={18} aria-hidden="true" />
+                Try again
+              </button>
+              {onSkip ? (
+                <button type="button" className="secondary-link" onClick={onSkip}>
+                  Skip review
+                </button>
+              ) : null}
+            </div>
+          </div>
+        </section>
+      );
+    }
+    return (
+      <section className="problem-pending" data-testid="problem-pending">
+        <div className="problem-pending__content">
+          <p className="eyebrow">{eyebrow ?? title ?? 'Problem'}</p>
+          <p className="problem-prompt-pending" role="status">
+            Generating the next problem...
+          </p>
+        </div>
+      </section>
+    );
   }
+
+  // The guard above narrows `problem` to a defined Problem, but TypeScript drops
+  // that narrowing inside the handler closures below; capture it once as a
+  // non-optional binding so they read the ready problem without re-checking.
+  const activeProblem: Problem = problem;
 
   const isLast = index >= total - 1;
   const busy = phase === 'grading';
@@ -470,10 +520,8 @@ export function ProblemPlayer({
   function resetForProblem() {
     setPhase('solving');
     setAttempts(0);
-    setHintTier(0);
-    setHintsUsed(0);
+    setHints([]);
     setResult(null);
-    setHint(null);
     setHintPending(false);
     setHintError(null);
     setGradeError(null);
@@ -495,15 +543,13 @@ export function ProblemPlayer({
 
   // Save the current problem's full working state so it can be restored later.
   function snapshotCurrent() {
-    sessionsRef.current.set(problem.problemId, {
+    sessionsRef.current.set(activeProblem.problemId, {
       strokes: inkRef.current?.getStrokes() ?? [],
       viewport: inkRef.current?.getViewport() ?? IDENTITY_VIEW,
       phase,
       attempts,
-      hintTier,
-      hintsUsed,
+      hints,
       result,
-      hint,
       hintError,
       gradeError,
       recorded: recordedRef.current,
@@ -518,14 +564,12 @@ export function ProblemPlayer({
 
     snapshotCurrent();
 
-    const saved = sessionsRef.current.get(problems[target].problemId);
+    const saved = sessionsRef.current.get(problems[target]?.problemId ?? '');
     if (saved) {
       setPhase(saved.phase);
       setAttempts(saved.attempts);
-      setHintTier(saved.hintTier);
-      setHintsUsed(saved.hintsUsed);
+      setHints(saved.hints);
       setResult(saved.result);
-      setHint(saved.hint);
       setHintPending(false);
       setHintError(saved.hintError);
       setGradeError(saved.gradeError);
@@ -558,8 +602,9 @@ export function ProblemPlayer({
       onSessionClear?.();
       // Finishing with every problem solved completes the set (which unlocks the
       // next lesson). Gated on all-solved so advancing past a skipped problem
-      // never counts as completion.
-      if (problems.every((entry) => solvedIds.has(entry.problemId))) {
+      // never counts as completion. A hole (a still-generating or failed slot)
+      // is not solved, so a set with one can never complete.
+      if (problems.every((entry) => entry != null && solvedIds.has(entry.problemId))) {
         onComplete?.();
       }
       return;
@@ -573,9 +618,9 @@ export function ProblemPlayer({
       throw new Error('The workspace is still loading. Please try again.');
     }
     return {
-      // A materialized review problem keeps its placeholder problemId for set
-      // order but is graded against the freshly generated key (gradeId).
-      problemId: problem.gradeId ?? problem.problemId,
+      // A generated problem is graded against its server key (gradeId); an
+      // authored problem has no gradeId, so it grades against its problemId.
+      problemId: activeProblem.gradeId ?? activeProblem.problemId,
       imagePngBase64: ink.toPngBase64(),
       lines: ink.getStrokeLines().map((line) => ({ id: line.id, bbox: line.bbox })),
     };
@@ -615,25 +660,28 @@ export function ProblemPlayer({
         // Record the outcome once per problem. Returning to a solved problem and
         // checking again must not double count mastery or the solved tally.
         if (!recordedRef.current) {
+          // A correct solve is a celebration moment. Fire inside this guard so a
+          // re-check of an already solved problem never bursts a second time.
+          celebrateSmall();
           recordProblemResult({
-            problemId: problem.problemId,
-            misconceptionIds: problem.misconceptionTags,
+            problemId: activeProblem.problemId,
+            misconceptionIds: activeProblem.misconceptionTags,
             caught: true,
             solved: true,
-            hintsUsed,
+            hintsUsed: hints.length,
             attempts: attemptCount,
           });
           setSolvedIds((prev) => {
-            if (prev.has(problem.problemId)) return prev;
+            if (prev.has(activeProblem.problemId)) return prev;
             const next = new Set(prev);
-            next.add(problem.problemId);
+            next.add(activeProblem.problemId);
             return next;
           });
-          // A generated review problem carries the emergent node it targets;
-          // solving it is a spaced catch on that node. The recordedRef guard
+          // A generated problem can trap more than one emergent node, so solving
+          // it is a spaced catch on every targeted node. The recordedRef guard
           // keeps a re-check of an already solved problem from double counting.
-          if (problem.targetMisconceptionNodeId) {
-            recordNodeCatch(problem.targetMisconceptionNodeId);
+          for (const nodeId of activeProblem.targetMisconceptionNodeIds ?? []) {
+            recordNodeCatch(nodeId);
           }
           recordedRef.current = true;
         }
@@ -678,11 +726,12 @@ export function ProblemPlayer({
     }
 
     try {
-      const next = await getHint({ ...input, tier: hintTier });
-      setHint(next);
-      setHintsUsed((count) => count + 1);
-      setHintTier((tier) => (tier < 2 ? ((tier + 1) as 0 | 1 | 2) : 2));
+      // The next hint's level is how many were already given, and the prior hint
+      // texts let the model go strictly deeper without repeating. No ceiling.
+      const next = await getHint({ ...input, level: hints.length, priorHints: hints.map((h) => h.text) });
+      setHints((prev) => [...prev, next]);
     } catch (error) {
+      console.error('getHint failed', error);
       setHintError(toErrorMessage(error));
     } finally {
       setHintPending(false);
@@ -708,6 +757,8 @@ export function ProblemPlayer({
       const res = await askQuestion({ ...input, question });
       setAskAnswer(res.answer);
     } catch (error) {
+      // Surface the raw cause for debugging; the user-facing copy stays clean.
+      console.error('askQuestion failed', error);
       setAskError(toErrorMessage(error));
     } finally {
       setAskPending(false);
@@ -731,35 +782,32 @@ export function ProblemPlayer({
         />
       </div>
 
-      <SessionChrome
-        current={index + 1}
-        total={total}
-        title={title}
-        allowAllSteps
-        solvedSteps={problems
-          .map((entry, entryIndex) => (solvedIds.has(entry.problemId) ? entryIndex + 1 : 0))
-          .filter((segment) => segment > 0)}
-        onStepSelect={goTo}
-      />
+      {hideProgressChrome ? null : (
+        <SessionChrome
+          current={index + 1}
+          total={total}
+          title={title}
+          allowAllSteps
+          solvedSteps={problems
+            .map((entry, entryIndex) => (entry != null && solvedIds.has(entry.problemId) ? entryIndex + 1 : 0))
+            .filter((segment) => segment > 0)}
+          onStepSelect={goTo}
+        />
+      )}
 
       <div className="problem-stage">
         <aside className={drawerOpen ? 'problem-drawer' : 'problem-drawer problem-drawer--collapsed'}>
           <div className="problem-drawer-clip">
             <div className="experience-panel experience-panel-concept problem-prompt problem-drawer-panel">
               <p className="eyebrow">
-                Problem {index + 1} of {total}
+                {eyebrow ?? `Problem ${index + 1} of ${total}`}
               </p>
               <h2>{problem.title}</h2>
-              {phase === 'generating' ? (
-                <p className="problem-prompt-pending" role="status">
-                  Preparing this problem...
-                </p>
-              ) : (
-                <>
-                  <p>{problem.prompt}</p>
-                  {problem.figure ? <p className="problem-figure">{problem.figure}</p> : null}
-                </>
-              )}
+              <p><MathText text={problem.prompt} /></p>
+              {problem.figure ? (
+                <p className="problem-figure"><MathText text={problem.figure} /></p>
+              ) : null}
+              {drawerPreface}
             </div>
           </div>
           <button
@@ -848,18 +896,23 @@ export function ProblemPlayer({
               </p>
             ) : null}
 
-            {hint ? (
+            {hints.length > 0 ? (
               <section className="feedback-panel notice problem-feedback" aria-live="polite">
                 <button
                   type="button"
                   className="session-close problem-feedback-dismiss"
-                  onClick={() => setHint(null)}
-                  aria-label="Dismiss hint"
+                  onClick={() => setHints([])}
+                  aria-label={hints.length > 1 ? 'Dismiss hints' : 'Dismiss hint'}
                 >
                   <X size={16} aria-hidden="true" />
                 </button>
-                <h3>Hint</h3>
-                <p>{hint.text}</p>
+                <h3>{hints.length > 1 ? 'Hints' : 'Hint'}</h3>
+                {hints.map((entry, i) => (
+                  <p key={i} className="problem-hint">
+                    {hints.length > 1 ? <strong className="problem-hint-step">{i + 1}. </strong> : null}
+                    <span><MathText text={entry.text} /></span>
+                  </p>
+                ))}
               </section>
             ) : null}
 
@@ -921,9 +974,9 @@ export function ProblemPlayer({
                 <h3>
                   <TriangleAlert size={18} aria-hidden="true" /> Look again
                 </h3>
-                {result?.explanation ? <p>{result.explanation}</p> : null}
+                {result?.explanation ? <p><MathText text={result.explanation} /></p> : null}
                 {result?.errorType === 'concept' && result.conceptMatch ? (
-                  <p className="problem-misconception">{result.conceptMatch.specificNote}</p>
+                  <p className="problem-misconception"><MathText text={result.conceptMatch.specificNote} /></p>
                 ) : null}
               </section>
             ) : null}
@@ -933,11 +986,11 @@ export function ProblemPlayer({
                 <h3>
                   <CircleCheck size={18} aria-hidden="true" /> Solved
                 </h3>
-                {result?.explanation ? <p>{result.explanation}</p> : null}
+                {result?.explanation ? <p><MathText text={result.explanation} /></p> : null}
                 {result?.correctSolution && result.correctSolution.length > 0 ? (
                   <ol className="problem-solution">
                     {result.correctSolution.map((step, stepIndex) => (
-                      <li key={stepIndex}>{step}</li>
+                      <li key={stepIndex}><MathText text={step} /></li>
                     ))}
                   </ol>
                 ) : null}
@@ -955,23 +1008,6 @@ export function ProblemPlayer({
                 </h3>
                 <p>{gradeError}</p>
                 <button type="button" className="secondary-button" onClick={handleRetry}>
-                  <RotateCcw size={18} aria-hidden="true" />
-                  Retry
-                </button>
-              </section>
-            ) : null}
-
-            {phase === 'genError' ? (
-              <section className="feedback-panel error problem-feedback" role="alert">
-                <h3>
-                  <TriangleAlert size={18} aria-hidden="true" /> Could not load problem
-                </h3>
-                <p>{genError}</p>
-                <button
-                  type="button"
-                  className="secondary-button"
-                  onClick={() => setGenAttempt((attempt) => attempt + 1)}
-                >
                   <RotateCcw size={18} aria-hidden="true" />
                   Retry
                 </button>
@@ -1010,7 +1046,7 @@ export function ProblemPlayer({
                   disabled={busy || hintPending}
                 >
                   <Lightbulb size={18} aria-hidden="true" />
-                  {hintPending ? 'Thinking' : 'Need a hint'}
+                  {hintPending ? 'Thinking' : hints.length === 0 ? 'Need a hint' : 'Another hint'}
                 </button>
 
                 <button
@@ -1053,46 +1089,56 @@ export function ProblemPlayer({
         </FloatingWindow>
       ) : null}
 
-      {confirmClear ? (
-        <div
-          className="confirm-overlay"
-          role="presentation"
-          onClick={() => setConfirmClear(false)}
-        >
-          <div
-            className="confirm-card"
-            role="alertdialog"
-            aria-modal="true"
-            aria-labelledby="confirm-clear-title"
-            aria-describedby="confirm-clear-body"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <h3 id="confirm-clear-title">Clear all your work?</h3>
-            <p id="confirm-clear-body">
-              This erases everything on the canvas and can&rsquo;t be undone.
-            </p>
-            <div className="confirm-actions">
-              <button
-                type="button"
-                className="secondary-link"
-                onClick={() => setConfirmClear(false)}
+      {confirmClear
+        ? createPortal(
+            // Portaled to document.body (mirroring FloatingWindow) so the dialog escapes
+            // the problem player's transformed/nested stacking context. Rendered inline it
+            // was trapped there and painted at its ancestor's level, so it sat BELOW the
+            // body-level equation-sheet FloatingWindow (z-index 60) no matter how high its
+            // own z-index was. At the document root, .confirm-overlay (z-index 80) reliably
+            // wins over the sheet. theme-handdrawn travels with it so the Cancel/Clear
+            // buttons keep their sketch look (from .theme-handdrawn .secondary-*).
+            <div
+              className="confirm-overlay theme-handdrawn"
+              role="presentation"
+              onClick={() => setConfirmClear(false)}
+            >
+              <div
+                className="confirm-card"
+                role="alertdialog"
+                aria-modal="true"
+                aria-labelledby="confirm-clear-title"
+                aria-describedby="confirm-clear-body"
+                onClick={(event) => event.stopPropagation()}
               >
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="secondary-button"
-                onClick={() => {
-                  inkRef.current?.clear();
-                  setConfirmClear(false);
-                }}
-              >
-                Clear canvas
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+                <h3 id="confirm-clear-title">Clear all your work?</h3>
+                <p id="confirm-clear-body">
+                  This erases everything on the canvas and can&rsquo;t be undone.
+                </p>
+                <div className="confirm-actions">
+                  <button
+                    type="button"
+                    className="secondary-link"
+                    onClick={() => setConfirmClear(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    onClick={() => {
+                      inkRef.current?.clear();
+                      setConfirmClear(false);
+                    }}
+                  >
+                    Clear canvas
+                  </button>
+                </div>
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
     </section>
   );
 }

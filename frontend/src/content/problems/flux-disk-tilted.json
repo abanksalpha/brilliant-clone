@@ -1,0 +1,26 @@
+{
+  "problemId": "flux-disk-tilted",
+  "lessonId": "electric-flux",
+  "unitId": "electrostatics",
+  "skillIds": ["electric-flux"],
+  "principleIds": ["field-concept"],
+  "misconceptionTags": ["flux-ignores-angle", "flux-uses-sin"],
+  "kind": "single",
+  "difficulty": 4,
+  "difficultyBand": 4,
+  "difficultyFeatures": {
+    "steps": 4,
+    "symbolic": false,
+    "calculus": false,
+    "multiPart": false,
+    "hasTrap": true
+  },
+  "provenance": "authored",
+  "title": "Flux through a tilted disk",
+  "prompt": "A flat circular disk of radius 0.10 m sits in a uniform electric field of 500 N/C. The disk's normal makes an angle of 30 degrees with the field. Find the electric flux through the disk.",
+  "givens": [
+    { "label": "disk radius", "value": "0.10 m" },
+    { "label": "field E", "value": "500 N/C" },
+    { "label": "angle of normal to field", "value": "30 degrees" }
+  ]
+}

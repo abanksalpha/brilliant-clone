@@ -1,0 +1,25 @@
+{
+  "problemId": "cl-field-and-force",
+  "lessonId": "coulombs-law",
+  "unitId": "electrostatics",
+  "skillIds": ["coulombs-law", "electric-field-field-lines"],
+  "principleIds": ["coulomb-force", "field-concept"],
+  "misconceptionTags": ["field-force-conflation"],
+  "kind": "synthesis",
+  "difficulty": 4,
+  "difficultyBand": 4,
+  "difficultyFeatures": {
+    "steps": 3,
+    "symbolic": false,
+    "calculus": false,
+    "multiPart": false,
+    "hasTrap": true
+  },
+  "provenance": "authored",
+  "title": "Force on a charge in a field",
+  "prompt": "At a point in space, other charges set up a uniform electric field of magnitude 6.0e4 N/C. A +5.0 microcoulomb point charge is placed at that point. Find the magnitude of the electric force on it. Use k = 8.99e9 N m^2/C^2.",
+  "givens": [
+    { "label": "E", "value": "6.0e4 N/C" },
+    { "label": "q", "value": "+5.0 microcoulomb" }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "problemId": "mech-kinematics-drop",
+  "lessonId": "mechanics-kinematics",
+  "unitId": "mechanics",
+  "skillIds": ["mechanics-kinematics"],
+  "principleIds": ["mechanics-kinematics"],
+  "misconceptionTags": ["kinematics-omits-half", "kinematics-linear-time"],
+  "kind": "single",
+  "difficulty": 4,
+  "difficultyBand": 4,
+  "difficultyFeatures": {
+    "steps": 3,
+    "symbolic": false,
+    "calculus": false,
+    "multiPart": false,
+    "hasTrap": true
+  },
+  "provenance": "authored",
+  "title": "Distance in free fall",
+  "prompt": "A stone is dropped from rest and falls freely for 3.0 s. Ignoring air resistance, find the distance it falls. Use g = 9.8 m/s^2.",
+  "givens": [
+    { "label": "v_0", "value": "0 m/s" },
+    { "label": "t", "value": "3.0 s" }
+  ]
+}

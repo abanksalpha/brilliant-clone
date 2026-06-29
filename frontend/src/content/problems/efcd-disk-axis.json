@@ -1,0 +1,26 @@
+{
+  "problemId": "efcd-disk-axis",
+  "lessonId": "electric-fields-of-charge-distributions",
+  "unitId": "electrostatics",
+  "skillIds": ["electric-fields-of-charge-distributions"],
+  "principleIds": ["field-concept", "superposition"],
+  "misconceptionTags": ["disk-as-infinite-sheet", "distribution-as-point"],
+  "kind": "single",
+  "difficulty": 5,
+  "difficultyBand": 5,
+  "difficultyFeatures": {
+    "steps": 4,
+    "symbolic": false,
+    "calculus": true,
+    "multiPart": false,
+    "hasTrap": true
+  },
+  "provenance": "authored",
+  "title": "Field on the axis of a charged disk",
+  "prompt": "A disk of radius 0.10 m carries a uniform surface charge density of 2.0e-7 C/m^2. Find the magnitude of the electric field on the disk's axis, 0.050 m from its center. Use k = 8.99e9 N m^2/C^2.",
+  "givens": [
+    { "label": "surface charge density sigma", "value": "2.0e-7 C/m^2" },
+    { "label": "disk radius R", "value": "0.10 m" },
+    { "label": "axial distance x", "value": "0.050 m" }
+  ]
+}

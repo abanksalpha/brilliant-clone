@@ -45,13 +45,15 @@ export const COURSE_UNITS: CourseUnit[] = [
         skillId: 'charging-conductors-insulators',
         lessonId: 'charging-conductors-insulators',
       },
-      { title: 'Electric Field & Field Lines', skillId: 'electric-field-field-lines' },
+      { title: 'Electric Field & Field Lines', skillId: 'electric-field-field-lines', lessonId: 'electric-field-field-lines' },
       {
         title: 'Electric Fields of Charge Distributions',
         skillId: 'electric-fields-of-charge-distributions',
+        lessonId: 'electric-fields-of-charge-distributions',
       },
-      { title: 'Electric Flux', skillId: 'electric-flux' },
-      { title: "Gauss's Law", skillId: 'gausss-law' },
+      { title: 'Electric Flux', skillId: 'electric-flux', lessonId: 'electric-flux' },
+      { title: "Gauss's Law", skillId: 'gausss-law', lessonId: 'gausss-law' },
+      { title: 'Unit Review', skillId: 'charges-fields-gauss-review' },
     ],
   },
   {
@@ -63,6 +65,7 @@ export const COURSE_UNITS: CourseUnit[] = [
       { title: 'Electric Potential', skillId: 'electric-potential' },
       { title: 'Potential & Field Relationship', skillId: 'potential-field-relationship' },
       { title: 'Conservation of Electric Energy', skillId: 'conservation-of-electric-energy' },
+      { title: 'Unit Review', skillId: 'electric-potential-review' },
     ],
   },
   {
@@ -75,6 +78,7 @@ export const COURSE_UNITS: CourseUnit[] = [
       { title: 'Capacitors & Capacitance', skillId: 'capacitors-capacitance' },
       { title: 'Capacitor Combinations', skillId: 'capacitor-combinations' },
       { title: 'Dielectrics', skillId: 'dielectrics' },
+      { title: 'Unit Review', skillId: 'conductors-capacitors-review' },
     ],
   },
   {
@@ -89,6 +93,7 @@ export const COURSE_UNITS: CourseUnit[] = [
       { title: 'Compound DC Circuits', skillId: 'compound-dc-circuits' },
       { title: "Kirchhoff's Rules", skillId: 'kirchhoffs-rules' },
       { title: 'RC Circuits', skillId: 'rc-circuits' },
+      { title: 'Unit Review', skillId: 'electric-circuits-review' },
     ],
   },
   {
@@ -100,6 +105,7 @@ export const COURSE_UNITS: CourseUnit[] = [
       { title: 'Magnetic Force on Charges & Currents', skillId: 'magnetic-force-on-charges-currents' },
       { title: 'Biot-Savart Law', skillId: 'biot-savart-law' },
       { title: "Ampère's Law", skillId: 'amperes-law' },
+      { title: 'Unit Review', skillId: 'magnetic-fields-review' },
     ],
   },
   {
@@ -118,58 +124,24 @@ export const COURSE_UNITS: CourseUnit[] = [
     id: 'final-review',
     name: 'Final Review',
     topic: 'Exam prep',
-    lessons: [{ title: 'The AP Exam', skillId: 'the-ap-exam', problemSetSize: 50 }],
+    lessons: [
+      { title: 'Final Review', skillId: 'the-ap-exam', problemSetSize: 50 },
+      { title: 'Last Advice', skillId: 'last-advice' },
+    ],
   },
 ];
 
 export const COURSE_LESSON_TOTAL = COURSE_UNITS.reduce((total, unit) => total + unit.lessons.length, 0);
 
-// All lessons flattened in course (teaching) order. The path alternates lesson
-// then problem set throughout, so a learner's timeline "position" is two numbers:
-// how many lessons they have completed and how many of those lessons' problem
-// sets they have finished. They sit on the first not-yet-finished node, which is
-// the problem set of their last completed lesson when its set is still open, and
-// otherwise the next lesson.
+// All lessons flattened in course (teaching) order. The index of a lesson here
+// is the timeline "position": a learner who has completed N lessons sits on the
+// node at index N (their first not-yet-completed lesson).
 export const COURSE_LESSONS_FLAT: CourseLesson[] = COURSE_UNITS.flatMap((unit) => unit.lessons);
 
-/** A learner's position on the path: a lesson node, a problem-set node, or the end. */
-export type FriendNode =
-  | { kind: 'lesson'; index: number }
-  | { kind: 'pset'; index: number }
-  | { kind: 'end' };
-
-/**
- * Resolves where a learner sits given how many lessons and problem sets they have
- * completed. With more lessons done than sets, they are on the problem set of
- * their last completed lesson; otherwise they are on the next lesson (or the end
- * once everything is done). Inputs are clamped so out-of-range/legacy values are
- * safe (`psets` can never exceed `lessons`).
- */
-export function friendNode(completedCount: number, completedPsetCount: number): FriendNode {
-  const total = COURSE_LESSONS_FLAT.length;
-  const lessons = Math.min(Math.max(0, Math.trunc(completedCount)), total);
-  const psets = Math.min(Math.max(0, Math.trunc(completedPsetCount)), lessons);
-  if (lessons >= total && psets >= total) {
-    return { kind: 'end' };
-  }
-  if (psets < lessons) {
-    return { kind: 'pset', index: psets };
-  }
-  return { kind: 'lesson', index: lessons };
-}
-
-/** Node id for friend-overlay placement: "lesson:N", "pset:N", or "end". */
-export function friendNodeKey(completedCount: number, completedPsetCount: number): string {
-  const node = friendNode(completedCount, completedPsetCount);
-  return node.kind === 'end' ? 'end' : `${node.kind}:${node.index}`;
-}
-
-/** Human-readable label for the node a learner is currently on. */
-export function friendPositionLabel(completedCount: number, completedPsetCount: number): string {
-  const node = friendNode(completedCount, completedPsetCount);
-  if (node.kind === 'end') {
+/** Human-readable label for the lesson a learner with `completedCount` is on. */
+export function lessonLabelAtIndex(completedCount: number): string {
+  if (completedCount >= COURSE_LESSONS_FLAT.length) {
     return 'Finished the course';
   }
-  const title = COURSE_LESSONS_FLAT[node.index]?.title ?? 'Just getting started';
-  return node.kind === 'pset' ? `${title} \u00b7 Problem Set` : title;
+  return COURSE_LESSONS_FLAT[Math.max(0, completedCount)]?.title ?? 'Just getting started';
 }

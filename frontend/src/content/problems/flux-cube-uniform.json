@@ -1,0 +1,26 @@
+{
+  "problemId": "flux-cube-uniform",
+  "lessonId": "electric-flux",
+  "unitId": "electrostatics",
+  "skillIds": ["electric-flux"],
+  "principleIds": ["field-concept", "symmetry-gauss"],
+  "misconceptionTags": ["flux-closed-empty-nonzero", "flux-sums-face-magnitudes"],
+  "kind": "single",
+  "difficulty": 4,
+  "difficultyBand": 4,
+  "difficultyFeatures": {
+    "steps": 3,
+    "symbolic": false,
+    "calculus": false,
+    "multiPart": false,
+    "hasTrap": true
+  },
+  "provenance": "authored",
+  "title": "Net flux through a cube in a uniform field",
+  "prompt": "A cube of side 0.10 m sits in a uniform electric field of 300 N/C, with two of its faces perpendicular to the field. Find the net electric flux through the whole cube.",
+  "givens": [
+    { "label": "cube side", "value": "0.10 m" },
+    { "label": "field E", "value": "300 N/C, uniform" },
+    { "label": "orientation", "value": "two faces perpendicular to the field" }
+  ]
+}

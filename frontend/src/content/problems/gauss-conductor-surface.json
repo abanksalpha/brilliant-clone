@@ -1,0 +1,19 @@
+{
+  "problemId": "gauss-conductor-surface",
+  "lessonId": "gausss-law",
+  "unitId": "electrostatics",
+  "skillIds": ["gausss-law"],
+  "principleIds": ["symmetry-gauss", "field-concept"],
+  "misconceptionTags": ["conductor-uses-sheet-formula", "conductor-uses-coulomb"],
+  "kind": "single",
+  "difficulty": 5,
+  "difficultyBand": 5,
+  "difficultyFeatures": { "steps": 3, "symbolic": false, "calculus": false, "multiPart": false, "hasTrap": true },
+  "provenance": "authored",
+  "title": "Field just outside a conductor",
+  "prompt": "The flat surface of a charged conductor carries a surface charge density of 5.0e-8 C/m^2. Find the magnitude of the electric field just outside the surface. Use epsilon_0 = 8.85e-12 C^2/(N m^2).",
+  "givens": [
+    { "label": "surface charge density sigma", "value": "5.0e-8 C/m^2" },
+    { "label": "epsilon_0", "value": "8.85e-12 C^2/(N m^2)" }
+  ]
+}

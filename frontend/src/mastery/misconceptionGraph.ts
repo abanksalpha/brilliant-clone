@@ -194,3 +194,31 @@ export function isNodeMastered(node: MisconceptionNode, now: Date): boolean {
 export function trackedNodes(graph: MisconceptionGraph): MisconceptionNode[] {
   return Object.values(graph).filter((node) => node.status === 'tracked');
 }
+
+/**
+ * The tracked nodes whose principleId falls inside the given scope, weakest decayed
+ * strength first via currentStrength(node, now), ties broken by earlier createdISO
+ * (ascending) for stability. Returns up to `count` nodes, or none when count is not
+ * positive. It aims generated problems at the misconceptions a given practice
+ * scope can actually trap. Pure and deterministic given `now`.
+ */
+export function selectNodesForScope(
+  graph: MisconceptionGraph,
+  principleIds: string[],
+  count: number,
+  now: Date,
+): MisconceptionNode[] {
+  if (count <= 0) return [];
+
+  const scope = new Set(principleIds);
+  return trackedNodes(graph)
+    .filter((node) => scope.has(node.principleId))
+    .sort((a, b) => {
+      const byStrength = currentStrength(a, now) - currentStrength(b, now);
+      if (byStrength !== 0) return byStrength;
+      if (a.createdISO < b.createdISO) return -1;
+      if (a.createdISO > b.createdISO) return 1;
+      return 0;
+    })
+    .slice(0, count);
+}

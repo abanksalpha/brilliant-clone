@@ -1,4 +1,46 @@
-import { AskResult, GradeResult, HintResult, LineRef } from './types';
+import { AskResult, ExplainFeedbackResult, GradeResult, HintResult, LineRef } from './types';
+
+/**
+ * Strip Unicode dashes out of model-written prose and leave natural punctuation.
+ * The prompts already tell the model not to emit them, but instructions alone do
+ * not stop it, so this is the deterministic guarantee that no em dash (—,
+ * U+2014), horizontal bar (―, U+2015), or en dash (–, U+2013) ever reaches the
+ * client.
+ *
+ * Only those three Unicode dashes are touched. The ASCII hyphen-minus "-" is
+ * left exactly as is, because the app depends on it for math: exponents such as
+ * 10^-6, expressions like (1/0.5)^2, negative numbers, and numeric ranges. A
+ * dash that joins words becomes a comma and a single space, with any whitespace
+ * that hugged it collapsed (so "right—it's" reads "right, it's" and "word — word"
+ * reads "word, word"). The remaining steps tidy comma artifacts so the result
+ * never contains " ,", ",,", or a comma stranded against other punctuation.
+ * Non-string input is returned untouched.
+ */
+export function stripDashes(text: string): string {
+  if (typeof text !== 'string') {
+    return text;
+  }
+  return (
+    text
+      // Core rule: a Unicode dash, with any whitespace hugging it, becomes a
+      // comma and one space so joined words read naturally.
+      .replace(/\s*[\u2013\u2014\u2015]\s*/g, ', ')
+      // Collapse comma runs (",," or ", ,") left when a dash sat beside a comma.
+      .replace(/,(?:[ \t]*,)+/g, ',')
+      // Drop a space that ended up before a comma (" ," -> ",").
+      .replace(/[ \t]+,/g, ',')
+      // Drop a comma stranded right before other sentence punctuation (", ." -> ".").
+      .replace(/,[ \t]*([.;:!?])/g, '$1')
+      // ...or stranded right after it ("., " -> ". ").
+      .replace(/([.;:!?])[ \t]*,/g, '$1')
+      // Remove a comma left dangling at the very start or end of the text.
+      .replace(/^[ \t]*,[ \t]*/, '')
+      .replace(/[ \t]*,[ \t]*$/, '')
+      // Restore a single space after any comma that lost one, but never split a
+      // numeric thousands separator like 1,000.
+      .replace(/(?<!\d),(?!\s|$)/g, ', ')
+  );
+}
 
 // Locate a single JSON object inside arbitrary model text. The model is asked to
 // return only JSON, but it can wrap the payload in ```json fences or surrounding
@@ -90,15 +132,21 @@ export function parseGradeResponse(
     throw new Error('grade validation: explanation must be a non-empty string');
   }
 
+  // Validate the raw model text above, then hand back dash-free prose. The steps
+  // and explanation are shown to the student, so they get sanitized; ids, enums,
+  // and booleans below are never touched.
+  const cleanTranscribedSteps = transcribedSteps.map((step) => stripDashes(step));
+  const cleanExplanation = stripDashes(explanation);
+
+  // firstErrorLineId is a cosmetic anchor (which ink line to circle), not part of
+  // the grade itself. Vision models do not reliably echo an exact id, and when no
+  // ink lines are detected there is no valid id to return, so coerce anything that
+  // is not one of the provided ids to null rather than discarding a valid grade.
   const rawFirstErrorLineId = obj.firstErrorLineId;
-  let firstErrorLineId: string | null;
-  if (rawFirstErrorLineId === null) {
-    firstErrorLineId = null;
-  } else if (typeof rawFirstErrorLineId === 'string' && allowedLineIds.includes(rawFirstErrorLineId)) {
-    firstErrorLineId = rawFirstErrorLineId;
-  } else {
-    throw new Error('grade validation: firstErrorLineId must be null or one of the provided line ids');
-  }
+  const firstErrorLineId: string | null =
+    typeof rawFirstErrorLineId === 'string' && allowedLineIds.includes(rawFirstErrorLineId)
+      ? rawFirstErrorLineId
+      : null;
 
   if (isCorrect) {
     const correctSolution = obj.correctSolution;
@@ -107,15 +155,11 @@ export function parseGradeResponse(
     }
     return {
       isCorrect: true,
-      transcribedSteps,
+      transcribedSteps: cleanTranscribedSteps,
       firstErrorLineId,
-      explanation,
-      correctSolution,
+      explanation: cleanExplanation,
+      correctSolution: correctSolution.map((step) => stripDashes(step)),
     };
-  }
-
-  if (firstErrorLineId === null) {
-    throw new Error('grade validation: firstErrorLineId is required when isCorrect is false');
   }
 
   const errorType = obj.errorType;
@@ -126,9 +170,9 @@ export function parseGradeResponse(
   if (errorType === 'slip') {
     return {
       isCorrect: false,
-      transcribedSteps,
+      transcribedSteps: cleanTranscribedSteps,
       firstErrorLineId,
-      explanation,
+      explanation: cleanExplanation,
       errorType,
     };
   }
@@ -166,39 +210,39 @@ export function parseGradeResponse(
 
   return {
     isCorrect: false,
-    transcribedSteps,
+    transcribedSteps: cleanTranscribedSteps,
     firstErrorLineId,
-    explanation,
+    explanation: cleanExplanation,
     errorType,
-    conceptMatch: { matchedNodeId, principleId, wrongBelief, specificNote },
+    conceptMatch: {
+      matchedNodeId,
+      principleId,
+      wrongBelief: stripDashes(wrongBelief),
+      specificNote: stripDashes(specificNote),
+    },
   };
 }
 
-export function parseHintResponse(rawText: string, allowedLineIds: string[]): HintResult {
+export function parseHintResponse(rawText: string, allowedLineIds: string[], level: number): HintResult {
   const obj = extractJsonObject(rawText);
 
-  const rawTier = obj.tier;
-  if (rawTier !== 0 && rawTier !== 1 && rawTier !== 2) {
-    throw new Error('hint validation: tier must be 0, 1, or 2');
-  }
-  const tier: 0 | 1 | 2 = rawTier;
+  // The level is set by the server from the request, not echoed by the model.
+  const safeLevel = Number.isInteger(level) && level >= 0 ? level : 0;
 
   const text = obj.text;
   if (typeof text !== 'string' || text.trim().length === 0) {
     throw new Error('hint validation: text must be a non-empty string');
   }
 
+  // Like firstErrorLineId, targetLineId is a best-effort anchor: keep it only when
+  // it matches a provided ink id, otherwise drop to null instead of failing.
   const rawTargetLineId = obj.targetLineId;
-  let targetLineId: string | null;
-  if (rawTargetLineId === null) {
-    targetLineId = null;
-  } else if (typeof rawTargetLineId === 'string' && allowedLineIds.includes(rawTargetLineId)) {
-    targetLineId = rawTargetLineId;
-  } else {
-    throw new Error('hint validation: targetLineId must be null or one of the provided line ids');
-  }
+  const targetLineId: string | null =
+    typeof rawTargetLineId === 'string' && allowedLineIds.includes(rawTargetLineId)
+      ? rawTargetLineId
+      : null;
 
-  return { tier, text, targetLineId };
+  return { level: safeLevel, text: stripDashes(text), targetLineId };
 }
 
 export function parseAskResponse(rawText: string): AskResult {
@@ -209,5 +253,21 @@ export function parseAskResponse(rawText: string): AskResult {
     throw new Error('ask validation: answer must be a non-empty string');
   }
 
-  return { answer };
+  return { answer: stripDashes(answer) };
+}
+
+export function parseExplainResponse(rawText: string): ExplainFeedbackResult {
+  const obj = extractJsonObject(rawText);
+
+  const feedback = obj.feedback;
+  if (typeof feedback !== 'string' || feedback.trim().length === 0) {
+    throw new Error('explain validation: feedback must be a non-empty string');
+  }
+
+  const isOnTrack = obj.isOnTrack;
+  if (typeof isOnTrack !== 'boolean') {
+    throw new Error('explain validation: isOnTrack must be a boolean');
+  }
+
+  return { feedback: stripDashes(feedback).trim(), isOnTrack };
 }

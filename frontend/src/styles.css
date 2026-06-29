@@ -65,6 +65,60 @@ input:focus-visible {
   padding: 24px;
 }
 
+/* One loading screen for every page: just the word "Loading", centered. Uses the
+   root theme tokens so it reads the same whatever shell (if any) wraps it. */
+.loading-screen {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-height: 100vh;
+  padding: 24px;
+  color: var(--sketch-secondary);
+  font-family: var(--font-hand-body);
+  font-size: 1.1rem;
+}
+
+/* Inset variant: fill the available area of a flex parent (the lesson stage)
+   instead of the whole viewport, so it centers below the phase rail. */
+.loading-screen--inset {
+  flex: 1;
+  min-height: 0;
+}
+
+/* A generating or failed slot replaces the whole whiteboard, which renders in the
+   full-bleed canvas stage (.lesson-stage--canvas, padding-top: 0) so the paper can
+   reach y=0. Without their own clearance these panels also start at y=0 and sit
+   under the floating PhaseBar. Fill the stage and center the message in the content
+   area below the rail (the shared --lesson-box-top line), so the loading UI is clean
+   and never overlaps the bar. New, loading-only classes: the normal whiteboard
+   layout and the card phases are untouched. */
+.problem-pending {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  /* Drop below the floating rail (the canvas stage adds no top inset of its own);
+     no bottom padding, so the block centers exactly in the area below the bar. */
+  padding: var(--lesson-box-top, 0px) var(--s-6) 0;
+}
+
+.problem-pending__content {
+  display: grid;
+  justify-items: center;
+  gap: var(--s-2);
+  max-width: 32rem;
+  text-align: center;
+}
+
+/* The generating / unavailable message: quiet and hand-drawn, matching the shared
+   LoadingScreen so every lesson's loading state reads the same. */
+.problem-prompt-pending {
+  margin: 0;
+  color: var(--sketch-secondary);
+  font-family: var(--font-hand-body);
+  font-size: 1.1rem;
+}
+
 .auth-card,
 .panel,
 .lesson-placeholder {
@@ -518,6 +572,14 @@ p {
   margin-top: 12px;
 }
 
+/* The retry/skip row shown when an on-the-fly review or solve set fails to build. */
+.lesson-phase__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 12px;
+}
+
 .lesson-note {
   color: oklch(44% 0.04 72);
   font-size: 0.94rem;
@@ -630,6 +692,71 @@ p {
 
 .rich-inline-equation {
   padding: 1px 5px;
+}
+
+/* A standalone "SYMBOL = NUM / DEN" slide equation, typeset as a real fraction in
+   the lesson hand face instead of a monospace chip. align-items: stretch lets the
+   bar (the numerator's bottom border) span the wider of the two rows. */
+.rich-equation--fraction {
+  margin: var(--s-2) 0 0;
+  text-align: center;
+}
+
+.eq {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--sketch-ink);
+  font-family: var(--font-hand-title);
+  font-size: 1.7rem;
+  line-height: 1;
+}
+
+/* Subscripts/superscripts inherit the equation face (the hand font has no Unicode
+   sub/superscript glyphs) and sit small without stretching the row height. */
+.eq sub,
+.eq sup {
+  font-size: 0.58em;
+  line-height: 0;
+}
+
+.eq-frac {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: stretch;
+  text-align: center;
+}
+
+.eq-num {
+  padding: 0 0.6rem 0.1em;
+  border-bottom: 3px solid currentColor;
+  /* Pull k, q₁, q₂ a little closer so they read as one product, not three words. */
+  word-spacing: -0.14em;
+}
+
+.eq-den {
+  padding: 0.12em 0.6rem 0;
+}
+
+/* Inline math sub/superscripts (MathText). They are offset with position and
+   given a zero line height instead of using vertical-align, so a raised exponent
+   never stretches the line box. That keeps the plain baseline text vertically
+   centered in its container (for example a worked-example step box) even on a
+   line dense with exponents like (8.99e9)(2.0e-6). */
+.math-text sub,
+.math-text sup {
+  font-size: 0.74em;
+  line-height: 0;
+  position: relative;
+  vertical-align: baseline;
+}
+
+.math-text sup {
+  top: -0.46em;
+}
+
+.math-text sub {
+  bottom: -0.2em;
 }
 
 /* Feedback panels (the green/red boxes) stay plain prose: never surface an
@@ -4145,10 +4272,6 @@ input:focus-visible,
   background: var(--surface);
 }
 
-.form input:focus-visible {
-  border-color: var(--accent);
-}
-
 .google-button {
   display: inline-flex;
   align-items: center;
@@ -4641,6 +4764,12 @@ a.path-node-btn:active {
   cursor: default;
 }
 
+/* A locked node that is still a link is dev-only access: keep the locked look but
+   restore the clickable cursor so it does not read as inert. */
+.path-node--locked a.path-node-btn {
+  cursor: pointer;
+}
+
 .path-node--active .path-node-btn {
   animation: node-pulse 2.4s var(--ease) infinite;
 }
@@ -4752,14 +4881,32 @@ a.path-node-btn:active {
 /* --- Lesson focus mode ------------------------------------------------- */
 
 .lesson-shell {
+  /* The positioning context for the floating progress rail, so the rail overlays
+     the phase content and the whiteboard/paper can reach the very top (y=0). */
+  position: relative;
+  /* Vertical room the floating rail needs: card phases inset their content by
+     this much; the whiteboard phases push only their floating controls down so
+     the canvas paper still reaches the top. */
+  --lesson-rail-clearance: calc(var(--s-3) + 44px);
+  /* The Y where every lesson box's top edge sits: the rail clearance plus a small
+     drop. Shared by the card phases (stage padding-top) and the whiteboard
+     phases' floating problem box, so a card's top lines up exactly with the
+     problem statement box's top across phases. */
+  --lesson-box-top: calc(var(--lesson-rail-clearance) + var(--s-4));
   display: flex;
   flex-direction: column;
   /* 100vh is wrong on mobile: it counts the area behind the browser's URL bar,
      which pushes the full-screen problem player's bottom action dock off the
      visible screen. dvh tracks the actually-visible height. vh stays as a
      fallback for the few browsers without dvh. */
-  min-height: 100vh;
-  min-height: 100dvh;
+  height: 100vh;
+  height: 100dvh;
+  /* The lesson is a fixed full-screen view: phase content fills it, or scrolls
+     inside the stage. Clipping at the shell stops the page-level scrollbar that
+     would otherwise flash for the frame a phase remounts (or while the board
+     glides between whiteboard and card), which shrinks the viewport width and
+     shifts the centered rail. */
+  overflow: hidden;
   background: var(--paper);
 }
 
@@ -4856,6 +5003,123 @@ a.path-node-btn:active {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* --- Single lesson progress rail (PhaseBar) ---------------------------- */
+
+/* The slim PhaseBar floats over the top of the lesson, centered and capped,
+   nudged a little below the top edge. Being out of flow lets the phase content
+   (the whiteboard canvas above all) fill the shell from y=0 with no blank band
+   above it. The container ignores pointer events so drawing passes through to the
+   canvas everywhere except on the bar and the exit. The grid keeps the bar
+   centered while the exit stays pinned to the right with no overlap. */
+.lesson-rail {
+  position: absolute;
+  top: var(--s-3);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  display: grid;
+  grid-template-columns: 1fr minmax(0, 1040px) 1fr;
+  align-items: center;
+  gap: var(--s-3);
+  padding: 0 clamp(16px, 4vw, 24px);
+  pointer-events: none;
+}
+
+.lesson-rail .phase-bar {
+  grid-column: 2;
+  justify-self: center;
+  pointer-events: auto;
+  /* Nudge the bars + labels down a touch so they line up with the exit control
+     (which also sits slightly below the rail's vertical center). */
+  position: relative;
+  top: 6px;
+}
+
+/* A minimal exit back to the dashboard, kept beside the rail since the lesson
+   hides the ProblemPlayer's own SessionChrome (which carried the old exit). */
+.lesson-exit {
+  grid-column: 3;
+  justify-self: end;
+  pointer-events: auto;
+  /* Nudge the exit down from the rail's vertical center. position/top is used
+     (not transform) so it doesn't fight the hover/active translate. */
+  position: relative;
+  top: 6px;
+}
+
+/* The phase content fills the shell beneath the floating rail. Card phases inset
+   their top so they clear the rail; the whiteboard phases cancel that inset so
+   the canvas paper reaches y=0 and push only their floating controls down. */
+.lesson-stage {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  /* Card phases start their content at the shared box-top line, so a card's top
+     edge matches the whiteboard phases' problem statement box top exactly. */
+  padding-top: var(--lesson-box-top);
+}
+
+/* No entrance animation on a section change: keep the phase-root boxes from running
+   their own fx-fade-up too, so changing sections shows the new content instantly,
+   with no fade or rise. */
+.theme-handdrawn--lesson .lesson-player,
+.theme-handdrawn--lesson .experience-panel,
+.theme-handdrawn--lesson .panel {
+  animation: none;
+}
+
+/* Switching into a card screen (and each of its subparts: a Learn slide, an
+   Apply rung, an empty continue card) gets a small rise-in. Re-enables the shared
+   step-enter on these card surfaces above; the second selector beats the .panel
+   reset for card panels like the worked rung. Whiteboard phases (.lesson-player)
+   are left out and stay static, and the global reduced-motion reset collapses
+   this to an instant fade. */
+.theme-handdrawn--lesson .lesson-card-rise,
+.theme-handdrawn--lesson .panel.lesson-card-rise {
+  animation: step-enter var(--dur) var(--ease) both;
+}
+
+.lesson-stage--canvas {
+  padding-top: 0;
+}
+
+/* Card phases scroll inside the stage if they ever exceed the viewport, so the
+   page itself never scrolls and the rail never shifts. Whiteboard (--canvas)
+   phases fill exactly and must not get a scrollbar, so they are excluded. */
+.lesson-stage:not(.lesson-stage--canvas) {
+  overflow-y: auto;
+}
+
+/* Card phases (Learn, Apply, Inquiry) scroll as a whole instead: the shell is the
+   scroll container, so its absolutely positioned progress rail scrolls away with
+   the content rather than the tall card content sliding underneath a pinned rail.
+   The stage's own internal scroll is turned off so the overflow reaches the shell.
+   Whiteboard phases keep the fixed, full-bleed canvas (no page scroll). */
+.lesson-shell.lesson-shell--card {
+  overflow-y: auto;
+}
+
+.lesson-shell--card .lesson-stage:not(.lesson-stage--canvas) {
+  overflow-y: visible;
+}
+
+.lesson-stage--canvas .problem-drawer,
+.lesson-stage--canvas .problem-toolbar {
+  /* The problem statement box and the floating ink toolbar sit at the shared
+     box-top line (the same Y the card phases start at), so the box top is
+     consistent across phases. */
+  top: var(--lesson-box-top);
+}
+
+/* The PhaseBar is the lesson's only progress indicator, so suppress any
+   SessionChrome that a nested ProblemPlayer (the worked-to-faded completion
+   rung) would otherwise draw inside the lesson. The Review and Solve players
+   already drop it via hideProgressChrome; this covers the embedded one. */
+.theme-handdrawn--lesson .lesson-stage .session-chrome {
+  display: none;
 }
 
 /* --- Lesson containers (cohesion retint) ------------------------------- */
@@ -5147,13 +5411,6 @@ select {
   background: var(--surface);
   color: var(--ink);
   box-shadow: none;
-}
-
-.form input:hover,
-input:not([type='range']):not([type='checkbox']):not([type='radio']):hover,
-textarea:hover,
-select:hover {
-  border-color: var(--line);
 }
 
 .form button,
@@ -5608,11 +5865,12 @@ a.path-node-btn:active {
 }
 
 .app-shell--handdrawn .avatar-button:hover {
-  transform: translate(2px, 2px);
+  transform: translate(1px, 1px);
+  box-shadow: 2px 2px 0 0 var(--sketch-ink);
 }
 
 .app-shell--handdrawn .avatar-button:active {
-  transform: translate(2px, 2px);
+  transform: translate(3px, 3px);
   box-shadow: 0 0 0 0 var(--sketch-ink);
 }
 
@@ -5795,7 +6053,19 @@ a.path-node-btn:active {
 }
 
 .app-shell--handdrawn .path {
-  padding-top: 0;
+  /* Drop the first lesson node lower beneath the unit header. */
+  padding-top: var(--s-4);
+  /* Tighten the gap between a unit's last lesson node and the next unit box. */
+  padding-bottom: var(--s-1);
+  /* Pull consecutive lesson nodes closer together. */
+  gap: var(--s-4);
+}
+
+/* The last unit's path ends at the End pill: keep its bottom flush (overriding
+   the tightened padding above) so the spine stops at the pill instead of poking
+   out below it. */
+.app-shell--handdrawn .path:has(.path-end-box) {
+  padding-bottom: 0;
 }
 
 .app-shell--handdrawn .path-node--left,
@@ -5808,7 +6078,7 @@ a.path-node-btn:active {
 }
 
 .app-shell--handdrawn .path-node--left {
-  transform: translateX(-72px) rotate(-3deg);
+  transform: translateX(-72px) rotate(-2deg);
 }
 
 .app-shell--handdrawn .path-node--right {
@@ -5827,10 +6097,10 @@ a.path-node-btn:active {
   font-size: 1.15rem;
   text-transform: none;
   transition:
-    transform 100ms ease-out,
-    box-shadow 100ms ease-out,
-    background-color 100ms ease-out,
-    color 100ms ease-out;
+    transform var(--dur-fast) var(--ease),
+    box-shadow var(--dur-fast) var(--ease),
+    background-color var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease);
 }
 
 .app-shell--handdrawn a.path-node-btn:hover {
@@ -5838,16 +6108,21 @@ a.path-node-btn:active {
   color: var(--sketch-paper);
 }
 
-/* Hover/press rotate the node slightly around its own center — leaning a touch
-   further into its resting tilt — instead of nudging its position. */
+/* Hover presses the face 1px toward its resting shadow and shrinks the shadow by
+   the same 1px, so the shadow keeps its screen position while only the top of the
+   node moves; active sinks the face the full 4px onto the shadow, which collapses
+   flat. Every node is --left or --right, so scoping both covers all of them while
+   overriding the base themes' lift-and-grow hover shadow. */
 .app-shell--handdrawn .path-node--left a.path-node-btn:hover,
-.app-shell--handdrawn .path-node--left a.path-node-btn:active {
-  transform: translate(2px, 2px);
+.app-shell--handdrawn .path-node--right a.path-node-btn:hover {
+  transform: translate(1px, 1px);
+  box-shadow: 3px 3px 0 0 var(--sketch-ink);
 }
 
-.app-shell--handdrawn .path-node--right a.path-node-btn:hover,
+.app-shell--handdrawn .path-node--left a.path-node-btn:active,
 .app-shell--handdrawn .path-node--right a.path-node-btn:active {
-  transform: translate(2px, 2px);
+  transform: translate(4px, 4px);
+  box-shadow: 0 0 0 0 var(--sketch-ink);
 }
 
 .app-shell--handdrawn .path-node--complete a.path-node-btn:hover {
@@ -5855,12 +6130,12 @@ a.path-node-btn:active {
   color: var(--sketch-paper);
 }
 
-/* Hover/press keep the hand-drawn drop shadow (overriding the base themes' soft
-   hover shadow and pressed-flat shadow) — the node only rotates, its shadow
-   never collapses. */
-.app-shell--handdrawn a.path-node-btn:hover,
-.app-shell--handdrawn a.path-node-btn:active {
-  box-shadow: var(--sketch-shadow);
+/* The active node's attention pulse animates box-shadow, which would otherwise
+   pin the shadow at 4px and let it slide with the face on hover. Pause it while
+   hovered/pressed so the shrink above takes over and the shadow holds still. */
+.app-shell--handdrawn .path-node--active a.path-node-btn:hover,
+.app-shell--handdrawn .path-node--active a.path-node-btn:active {
+  animation: none;
 }
 
 .app-shell--handdrawn .path-node--complete .path-node-btn {
@@ -5881,6 +6156,37 @@ a.path-node-btn:active {
   animation: node-pulse-handdrawn 3s ease-out infinite;
 }
 
+/* Returning from a lesson: a single locate ping (an expanding ink ring) on the
+   node just left, while the page centers on it. Drawn on a pseudo-element so it
+   never disturbs the node's border, shadow, or the active node's ongoing pulse. */
+.app-shell--handdrawn .path-node--returned .path-node-btn {
+  position: relative;
+}
+
+.app-shell--handdrawn .path-node--returned .path-node-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  animation: return-ping 1000ms var(--ease-out-quint) both;
+}
+
+@keyframes return-ping {
+  from {
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--sketch-ink) 40%, transparent);
+  }
+  to {
+    box-shadow: 0 0 0 14px color-mix(in oklab, var(--sketch-ink) 0%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell--handdrawn .path-node--returned .path-node-btn::after {
+    animation: none;
+  }
+}
+
 .app-shell--handdrawn .path-node-label {
   color: var(--sketch-ink);
   font-family: var(--font-hand-body);
@@ -5897,14 +6203,19 @@ a.path-node-btn:active {
   font-size: 0.9rem;
   font-weight: 700;
   box-shadow: 2px 2px 0 0 var(--sketch-ink);
+  transition:
+    transform var(--dur-fast) var(--ease),
+    box-shadow var(--dur-fast) var(--ease);
 }
 
 .app-shell--handdrawn .path-node--active a.path-node-btn:hover ~ .path-node-flag {
-  transform: translate(2px, 2px) rotate(1deg);
+  transform: translate(1px, 1px) rotate(1deg);
+  box-shadow: 1px 1px 0 0 var(--sketch-ink);
 }
 
 .app-shell--handdrawn .path-node--active a.path-node-btn:active ~ .path-node-flag {
-  transform: translate(4px, 4px) rotate(1deg);
+  transform: translate(2px, 2px) rotate(1deg);
+  box-shadow: 0 0 0 0 var(--sketch-ink);
 }
 
 .app-shell--handdrawn .path-end-box {
@@ -6090,6 +6401,12 @@ a.path-node-btn:active {
   font-family: var(--font-hand-body);
   font-size: 1rem;
   font-weight: 400;
+  box-shadow: 2px 2px 0 0 var(--sketch-ink);
+  transition:
+    transform var(--dur-fast) var(--ease),
+    box-shadow var(--dur-fast) var(--ease),
+    background-color var(--dur-fast) var(--ease),
+    border-color var(--dur-fast) var(--ease);
 }
 
 .theme-handdrawn .secondary-link:hover,
@@ -6101,7 +6418,7 @@ a.path-node-btn:active {
   background: color-mix(in oklab, var(--sketch-secondary) 15%, var(--hd-raised));
   border-color: var(--sketch-ink);
   transform: translate(1px, 1px);
-  box-shadow: 2px 2px 0 0 var(--sketch-ink);
+  box-shadow: 1px 1px 0 0 var(--sketch-ink);
 }
 
 .theme-handdrawn .secondary-link:active,
@@ -6110,7 +6427,7 @@ a.path-node-btn:active {
 .theme-handdrawn .pot-control-button:active:not(:disabled),
 .theme-handdrawn .flux-angle-chip:active:not(:disabled),
 .theme-handdrawn .session-close:active {
-  transform: translate(3px, 3px);
+  transform: translate(2px, 2px);
   box-shadow: 0 0 0 0 var(--sketch-ink);
   border-bottom-width: 3px;
 }
@@ -6258,13 +6575,33 @@ a.path-node-btn:active {
 .theme-handdrawn--lesson .experience-panel,
 .theme-handdrawn--lesson .step-panel {
   background: var(--hd-raised);
-  border-radius: 28px;
+  /* Slightly clunky hand-drawn corners, matching the ink toolbar, instead of a
+     perfectly uniform radius. The four corners differ a touch so the box reads
+     as drawn by hand like the rest of the sketch chrome. */
+  border-radius: var(--sketch-wobbly-sm);
+  /* Flat sketch boxes: the 3px border alone defines them, so every edge reads
+     the same. The soft drop shadow (--shadow-card) pooled at the bottom and made
+     the bottom edge look heavier than the top; the hard offset "pop" shadow is
+     reserved for interactive controls (buttons) so they still lift off the page. */
+  box-shadow: none;
 }
 
 .theme-handdrawn--lesson .feedback-panel.notice {
   border-style: dashed;
   border-color: color-mix(in oklab, var(--success-lip) 72%, var(--sketch-ink));
   background: color-mix(in oklab, var(--success) 20%, var(--hd-raised));
+  color: var(--sketch-ink);
+}
+
+/* The worked-example "Keep building" feedback uses the grader's box format (solid
+   ink border, sketch radius) but a warm yellow fill instead of the red error
+   panel: it is "keep going" guidance, not a wrong answer. The triple-class
+   selector beats the base .theme-handdrawn .feedback-panel background. */
+.theme-handdrawn .feedback-panel.worked-example__feedback--building,
+.theme-handdrawn--lesson .feedback-panel.worked-example__feedback--building {
+  border: 3px solid var(--sketch-ink);
+  border-radius: var(--sketch-wobbly-sm);
+  background: color-mix(in oklab, var(--sketch-note) 78%, var(--hd-raised));
   color: var(--sketch-ink);
 }
 
@@ -7320,6 +7657,18 @@ button.cl1-mini-panel {
   }
 }
 
+/* The exact reverse of fx-menu-in-up, for closing a menu that opened upward. */
+@keyframes fx-menu-out-down {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: translateY(6px) scale(0.96);
+  }
+}
+
 @keyframes fx-draw-line {
   from {
     transform: translateX(-1px) scaleY(0);
@@ -7417,7 +7766,7 @@ button.cl1-mini-panel {
   animation: fx-draw-line 600ms var(--ease) backwards;
 }
 
-/* Path nodes fade in (opacity only — the li keeps its left/right transform and
+/* Path nodes fade in (opacity only; the li keeps its left/right transform and
    the active node keeps its pulse). Stagger the first several per unit. */
 .home--intro .path-node {
   animation: fx-fade var(--dur-enter) var(--ease) backwards;
@@ -7625,6 +7974,12 @@ a.path-node-btn:hover ~ .path-node-label {
   animation: fx-menu-in-up var(--dur) var(--ease);
 }
 
+/* Closing: play the open animation in reverse, then unmount (the component drops
+   the menu on animationend) so it eases out instead of vanishing. */
+.course-menu--closing {
+  animation: fx-menu-out-down var(--dur) var(--ease) forwards;
+}
+
 .course-menu-group + .course-menu-group {
   margin-top: 4px;
   padding-top: 4px;
@@ -7779,7 +8134,9 @@ a.path-node-btn:hover ~ .path-node-label {
 /* --- Friends on the dashboard timeline --------------------------------- */
 .path-node-friends {
   position: absolute;
-  top: -8px;
+  /* Rests over the upper part of the lesson box. Raised by ~1/3 of the 34px
+     avatar height from its prior resting spot. */
+  top: -3px;
   left: calc(50% + 20px);
   display: flex;
   align-items: center;
@@ -7824,6 +8181,29 @@ a.path-node-btn:hover ~ .path-node-label {
 .app-shell--handdrawn .friend-avatar--more {
   background: var(--sketch-ink);
   color: var(--sketch-paper);
+}
+
+/* The friend cluster lives inside each path-node li, which carries a resting
+   rotate() for the hand-drawn look. Counter-rotate the cluster by the inverse of
+   each side's angle so the avatars sit level while the node keeps its tilt. */
+.app-shell--handdrawn .path-node--left .path-node-friends {
+  /* Counterclockwise so the row's right end lifts: a gentle positive height
+     slope (the row tilts a tiny bit to the left). */
+  transform: rotate(-4deg);
+}
+
+.app-shell--handdrawn .path-node--right .path-node-friends {
+  transform: rotate(-5deg);
+}
+
+@media (max-width: 700px) {
+  .app-shell--handdrawn .path-node--left .path-node-friends {
+    transform: rotate(-2deg);
+  }
+
+  .app-shell--handdrawn .path-node--right .path-node-friends {
+    transform: rotate(-4deg);
+  }
 }
 
 /* --- Friends entry point in the top bar -------------------------------- */
@@ -8000,6 +8380,8 @@ a.path-node-btn:hover ~ .path-node-label {
 .friends-select {
   width: 100%;
   min-width: 0;
+  appearance: none;
+  -webkit-appearance: none;
   padding: 12px 14px;
   font-family: inherit;
   font-size: 1.05rem;
@@ -8221,21 +8603,27 @@ a.path-node-btn:hover ~ .path-node-label {
   box-shadow: var(--sketch-shadow);
 }
 
-.app-shell--handdrawn .friends-select {
+/* The generic input reset (`input:not([type='range'])…`, specificity 0,3,1) has
+   higher specificity than a plain `.app-shell--handdrawn .friends-select`, so it
+   would win and the box would render as a thin default field. Mirror that
+   selector's shape, scoped to this shell, to win, exactly as .theme-handdrawn
+   does for the in-app text boxes. (Only the friends search box is an input under
+   this shell.) --hd-raised is scoped to .theme-handdrawn, so its value is
+   inlined here. */
+.app-shell--handdrawn input:not([type='range']):not([type='checkbox']):not([type='radio']) {
   border: 3px solid var(--sketch-ink);
   border-radius: var(--sketch-wobbly-sm);
-  /* Same value as --hd-raised, inlined because that token is scoped to
-     .theme-handdrawn and is not in scope on the app-shell (friends) route. */
   background: color-mix(in oklab, var(--sketch-paper) 74%, oklch(99.5% 0.006 90));
   box-shadow: 2px 2px 0 0 var(--sketch-ink);
   font-family: var(--font-hand-body);
   color: var(--sketch-ink);
 }
 
-.app-shell--handdrawn .friends-select:focus,
-.app-shell--handdrawn .friends-select:focus-visible {
-  outline: 3px solid color-mix(in oklab, var(--sketch-ink) 55%, var(--sketch-paper));
-  outline-offset: 3px;
+/* Selecting into the box must not add any ring or border: the box keeps its
+   resting border and shadow unchanged, matching the other text fields. */
+.app-shell--handdrawn input:not([type='range']):not([type='checkbox']):not([type='radio']):focus,
+.app-shell--handdrawn input:not([type='range']):not([type='checkbox']):not([type='radio']):focus-visible {
+  outline: none;
   border-color: var(--sketch-ink);
   box-shadow: 2px 2px 0 0 var(--sketch-ink);
 }
@@ -8589,7 +8977,9 @@ a.path-node-btn:hover ~ .path-node-label {
   position: absolute;
   left: clamp(16px, 4vw, 24px);
   top: 0;
-  bottom: var(--s-4);
+  /* Match the bottom gap to the left gap so the box is inset evenly from the
+     screen's left and bottom edges. */
+  bottom: clamp(16px, 4vw, 24px);
   z-index: 8;
   width: var(--drawer-w);
   transition: width var(--dur-slow) var(--ease-out-quint);
@@ -8606,7 +8996,9 @@ a.path-node-btn:hover ~ .path-node-label {
   position: relative;
   height: 100%;
   overflow: hidden;
-  border-radius: 28px;
+  /* Match the inner panel's clunky corners so the overflow mask never rounds the
+     hand-drawn corners back to a perfect arc. */
+  border-radius: var(--sketch-wobbly-sm);
   box-shadow: var(--sketch-shadow-soft);
 }
 
@@ -8654,7 +9046,9 @@ a.path-node-btn:hover ~ .path-node-label {
 }
 
 .problem-drawer-toggle:hover {
-  background: var(--sketch-note);
+  /* A slightly darker gray than the resting paper, tinted to the warm theme
+     rather than a flat gray, instead of the yellow note highlight. */
+  background: color-mix(in oklab, var(--sketch-paper) 88%, var(--sketch-ink));
 }
 
 .problem-drawer-toggle:active {
@@ -8795,6 +9189,9 @@ a.path-node-btn:hover ~ .path-node-label {
 .confirm-overlay {
   position: fixed;
   inset: 0;
+  /* Must stay above the equation-sheet floating window (.floating-window, z-index 60)
+     so the confirm dialog sits on top of it. The dialog is portaled to document.body
+     (see ProblemPlayer) so this z-index competes in the root stacking context. */
   z-index: 80;
   display: grid;
   place-items: center;
@@ -9058,7 +9455,7 @@ a.path-node-btn:hover ~ .path-node-label {
 }
 
 .pdf-viewer-zoom button:hover {
-  background: var(--sketch-note);
+  background: var(--sketch-muted);
 }
 
 .pdf-viewer-zoom button:disabled {
@@ -9184,4 +9581,419 @@ a.path-node-btn:hover ~ .path-node-label {
    small icon-to-text gap the feedback headings use. */
 .problem-ask-trigger {
   gap: var(--s-1);
+}
+
+/* ===========================================================================
+ * No focus border on text-entry fields
+ * A text input, textarea, or contenteditable must never gain a new outline,
+ * border, or ring when focused or while typing: the caret is the focus
+ * indicator. This wins over every themed :focus-visible outline rule above
+ * (hence !important). Non-text controls (buttons, links, sliders, role=button,
+ * checkboxes, radios, ranges) are excluded so they keep their focus ring.
+ * ======================================================================== */
+input:not([type='range']):not([type='checkbox']):not([type='radio']):not([type='button']):not([type='submit']):not([type='reset']):not([type='file']):not([type='color']):not([type='image']):focus,
+input:not([type='range']):not([type='checkbox']):not([type='radio']):not([type='button']):not([type='submit']):not([type='reset']):not([type='file']):not([type='color']):not([type='image']):focus-visible,
+textarea:focus,
+textarea:focus-visible,
+[contenteditable]:focus,
+[contenteditable]:focus-visible {
+  outline: none !important;
+}
+
+/* ===========================================================================
+ * INQUIRY PRETEST (Coulomb)
+ * The two-charge predict / reveal / explore boxes. They reuse the cl1 stage and
+ * rail, so spacing follows the rail's 14px grid gap (no per-line margins) and
+ * muted text reuses the same ink as .cl1-hint.
+ * ======================================================================== */
+/* The inquiry fills the lesson width like the saga two-pane experience: the
+   stage and rail grid spans the content measure and centers, rather than being
+   boxed inside a narrow card. Mirrors the saga lesson-player container. */
+.inquiry-stage {
+  width: min(100%, var(--content-max));
+  /* Top inset matches the Learn slide (margin var(--s-6)) so every card phase's
+     box top edge lines up. */
+  margin: var(--s-6) auto 0;
+  padding: 0 clamp(16px, 4vw, 24px) 24px;
+}
+
+/* Rail and stage share one height so their top and bottom edges line up (the base
+   .lesson-experience uses align-items: start, which left the shorter rail card
+   floating above a taller stage). */
+.inquiry-scene {
+  align-items: stretch;
+}
+
+.inquiry-scene .cl1-stage {
+  position: relative;
+  /* Center the charge figure in the stage instead of parking it at the top with a
+     large empty gap below. */
+  align-content: center;
+}
+
+/* The rail is a column with its text at the top and the action button pinned to
+   the bottom, so the now-taller card reads as deliberately filled rather than
+   leaving the button floating mid-card. */
+.inquiry-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.inquiry-rail .secondary-button {
+  margin-top: auto;
+}
+
+/* A separator above the revealed result, styled like the Learn-section table rule
+   (a light warm-gray hairline) so the two surfaces feel related. */
+.inquiry-rail .inquiry-divider {
+  width: 100%;
+  height: 0;
+  margin: 0;
+  border: 0;
+  border-top: 1px solid oklch(84% 0.018 78);
+}
+
+/* The learner's predicted ("ghost") force arrow. It is the same Arrow primitive
+   as the solid force vectors (same geometry, head, and gap off the charge), so it
+   can sit directly on top of the real arrow. Only the stroke differs: the theme
+   accent so it reads as provisional and distinct from the green force vectors, and
+   a dashed shaft so the solid arrow underneath shows through when they overlap. */
+.force-arrow-ghost {
+  --arrow-color: var(--sketch-accent);
+  stroke-width: 6;
+}
+
+/* Rectangular dashes (butt caps), so the prediction reads as the green force
+   arrow in every way except its color and the dashed shaft. */
+.force-arrow-dashed {
+  stroke-dasharray: 7 7;
+  stroke-linecap: butt;
+}
+
+/* The drag ring around the prediction tip: the landing page's dashed, spinning
+   "drag me" halo (.pot-hit-target--drag), copied here smaller and in the
+   prediction's red accent. */
+.predict-ring {
+  fill: none;
+  stroke: var(--sketch-accent);
+  stroke-width: 2.5px;
+  stroke-dasharray: 6 8;
+  stroke-linecap: round;
+  opacity: 0.95;
+  vector-effect: non-scaling-stroke;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: drag-ring-spin 9s linear infinite;
+  pointer-events: none;
+}
+
+/* Keep arrow shafts a constant on-screen thickness regardless of the field's
+   wide coordinate space, so they read as proper arrows, not thick bars. The
+   ghost carries the .force-arrow class, so it is covered here too. */
+.inquiry-scene .force-arrow {
+  vector-effect: non-scaling-stroke;
+}
+
+/* A heavier outline on the inquiry charges so they read as solid, hand-drawn
+   tokens against the wide field. Non-scaling keeps the weight constant despite
+   the field's large coordinate space. */
+.inquiry-scene .charge-circle {
+  stroke-width: 3px;
+  vector-effect: non-scaling-stroke;
+}
+
+/* The lead line of each stage: the prompt while predicting, the result on
+   reveal. Margin stays 0 so the rail's grid gap sets a single, even rhythm. */
+.inquiry-rail .inquiry-prompt-text,
+.inquiry-rail .inquiry-reveal-caption {
+  margin: 0;
+  font-weight: 600;
+}
+
+/* Secondary guidance: the drag hint and the optional reveal note. */
+.inquiry-rail .inquiry-hint,
+.inquiry-rail .inquiry-note {
+  margin: 0;
+  color: oklch(44% 0.04 72);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+/* First-screen lead-in (e.g. what charge is): body text above the bold prompt,
+   readable but lighter than the prompt itself. Margin 0 keeps the rail rhythm. */
+.inquiry-rail .inquiry-intro {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+/* Polarization inquiry scene: a charged rod (positive-tinted bar) beside a neutral
+   conducting sphere. Reuses the same charge tones as the point-charge scenes so the
+   induced separation reads in the lesson's color language. */
+.polarize-sphere {
+  fill: oklch(92% 0.01 72);
+  stroke: oklch(55% 0.02 72);
+  stroke-width: 2px;
+}
+
+.theme-handdrawn--lesson .polarize-sphere {
+  fill: color-mix(in oklab, var(--sketch-muted) 45%, var(--hd-raised));
+  stroke: var(--sketch-ink);
+  stroke-width: 2.5px;
+}
+
+.polarize-rod {
+  fill: oklch(94% 0.035 33);
+  stroke: oklch(48% 0.14 33);
+  stroke-width: 2px;
+}
+
+.theme-handdrawn--lesson .polarize-rod {
+  fill: var(--hd-charge-positive);
+  stroke: var(--sketch-ink);
+  stroke-width: 2.5px;
+}
+
+.polarize-rod-glyph {
+  fill: oklch(24% 0.025 72);
+  font-size: 30px;
+  font-weight: 760;
+  pointer-events: none;
+}
+
+.theme-handdrawn--lesson .polarize-rod-glyph {
+  fill: var(--sketch-ink);
+  font-family: var(--font-hand-title);
+}
+
+.polarize-glyph {
+  font-size: 24px;
+  font-weight: 760;
+  pointer-events: none;
+}
+
+.theme-handdrawn--lesson .polarize-glyph {
+  font-family: var(--font-hand-title);
+}
+
+.polarize-glyph--pos {
+  fill: oklch(48% 0.14 33);
+}
+
+.polarize-glyph--neg {
+  fill: oklch(39% 0.11 236);
+}
+
+.polarize-split {
+  stroke: oklch(70% 0.02 72);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 6;
+}
+
+.theme-handdrawn--lesson .polarize-split {
+  stroke: color-mix(in oklab, var(--sketch-ink) 32%, transparent);
+}
+
+.polarize-neutral {
+  fill: oklch(48% 0.02 72);
+  font-size: 34px;
+  font-weight: 760;
+  pointer-events: none;
+}
+
+.theme-handdrawn--lesson .polarize-neutral {
+  fill: color-mix(in oklab, var(--sketch-ink) 60%, transparent);
+  font-family: var(--font-hand-title);
+}
+
+/* Charge-sharing inquiry: the line where the two identical spheres touch. */
+.share-contact {
+  stroke: oklch(70% 0.02 72);
+  stroke-width: 3;
+}
+
+.theme-handdrawn--lesson .share-contact {
+  stroke: var(--sketch-ink);
+  stroke-width: 3;
+  opacity: 0.45;
+}
+
+/* Electric-field inquiry: the probe point (a small open marker in space) and the
+   null-point zero label. */
+.field-probe-point {
+  fill: oklch(99% 0.006 82);
+  stroke: oklch(45% 0.03 72);
+  stroke-width: 2;
+}
+
+.theme-handdrawn--lesson .field-probe-point {
+  fill: var(--hd-raised);
+  stroke: var(--sketch-ink);
+  stroke-width: 2.5px;
+}
+
+.field-null {
+  fill: oklch(45% 0.02 72);
+  font-size: 30px;
+  font-weight: 760;
+  pointer-events: none;
+}
+
+.theme-handdrawn--lesson .field-null {
+  fill: var(--sketch-ink);
+  font-family: var(--font-hand-title);
+}
+
+/* Electric-flux inquiry: uniform field lines, a surface (plate or closed box), and a
+   flux gauge. Lines that cross the surface bold up on reveal; the rest fade. */
+.flux-line line {
+  stroke: oklch(72% 0.02 72);
+  stroke-width: 2;
+}
+
+.flux-line polygon {
+  fill: oklch(72% 0.02 72);
+}
+
+.theme-handdrawn--lesson .flux-line line {
+  stroke: color-mix(in oklab, var(--sketch-ink) 38%, transparent);
+}
+
+.theme-handdrawn--lesson .flux-line polygon {
+  fill: color-mix(in oklab, var(--sketch-ink) 38%, transparent);
+}
+
+.flux-line--active line {
+  stroke: oklch(50% 0.13 150);
+  stroke-width: 3.5;
+}
+
+.flux-line--active polygon {
+  fill: oklch(50% 0.13 150);
+}
+
+.theme-handdrawn--lesson .flux-line--active line,
+.theme-handdrawn--lesson .flux-line--active polygon {
+  stroke: oklch(48% 0.12 150);
+  fill: oklch(48% 0.12 150);
+}
+
+.flux-line--dim {
+  opacity: 0.32;
+}
+
+.flux-plate {
+  stroke: oklch(40% 0.05 250);
+  stroke-width: 8;
+  stroke-linecap: round;
+  fill: none;
+}
+
+.theme-handdrawn--lesson .flux-plate {
+  stroke: var(--sketch-ink);
+  stroke-width: 8;
+}
+
+.flux-box {
+  fill: none;
+  stroke: oklch(45% 0.03 72);
+  stroke-width: 2.5;
+}
+
+.theme-handdrawn--lesson .flux-box {
+  stroke: var(--sketch-ink);
+}
+
+.flux-face {
+  stroke-width: 5;
+  stroke-linecap: round;
+}
+
+.flux-face--in {
+  stroke: oklch(39% 0.11 236);
+}
+
+.flux-face--out {
+  stroke: oklch(48% 0.12 150);
+}
+
+.flux-gauge-track {
+  fill: oklch(99% 0.006 82);
+  stroke: oklch(55% 0.02 72);
+  stroke-width: 2;
+}
+
+.theme-handdrawn--lesson .flux-gauge-track {
+  fill: var(--hd-raised);
+  stroke: var(--sketch-ink);
+  stroke-width: 2.5px;
+}
+
+.flux-gauge-fill {
+  fill: oklch(86% 0.07 80);
+}
+
+.flux-gauge-fill--true {
+  fill: oklch(72% 0.12 150);
+}
+
+.flux-gauge-guess {
+  stroke: var(--sketch-accent, oklch(58% 0.16 25));
+  stroke-width: 3;
+  stroke-dasharray: 5 5;
+}
+
+.flux-gauge-label {
+  fill: oklch(45% 0.02 72);
+  font-size: 22px;
+  font-weight: 760;
+}
+
+.theme-handdrawn--lesson .flux-gauge-label {
+  fill: var(--sketch-ink);
+  font-family: var(--font-hand-title);
+}
+
+/* Gauss's law inquiry: a point charge with a radial field, a dashed Gaussian loop,
+   and the loop's flux arcs (out where lines leave, in where they enter). */
+.gauss-ray line {
+  stroke: oklch(72% 0.02 72);
+  stroke-width: 2;
+}
+
+.gauss-ray polygon {
+  fill: oklch(72% 0.02 72);
+}
+
+.theme-handdrawn--lesson .gauss-ray line {
+  stroke: color-mix(in oklab, var(--sketch-ink) 36%, transparent);
+}
+
+.theme-handdrawn--lesson .gauss-ray polygon {
+  fill: color-mix(in oklab, var(--sketch-ink) 36%, transparent);
+}
+
+.gauss-loop {
+  fill: none;
+  stroke: oklch(45% 0.03 72);
+  stroke-width: 2.5;
+  stroke-dasharray: 7 6;
+}
+
+.theme-handdrawn--lesson .gauss-loop {
+  stroke: var(--sketch-ink);
+}
+
+.gauss-arc {
+  fill: none;
+  stroke-width: 5;
+}
+
+.gauss-arc--out {
+  stroke: oklch(48% 0.12 150);
+}
+
+.gauss-arc--in {
+  stroke: oklch(39% 0.11 236);
 }

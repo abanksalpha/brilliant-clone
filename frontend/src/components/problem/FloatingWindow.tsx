@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import {
   centeredPosition,
@@ -114,9 +115,17 @@ export function FloatingWindow({
     event.currentTarget.releasePointerCapture(event.pointerId);
   }
 
-  return (
+  // Rendered into document.body so the fixed window escapes the lesson/problem
+  // player's stacking context (a transformed ancestor would otherwise trap it
+  // below the floating rail). At the document root its z-index wins, so the sheet
+  // floats above the rail, toolbar, and phase content.
+  return createPortal(
     <section
-      className={interacting ? 'floating-window floating-window--interacting' : 'floating-window'}
+      // theme-handdrawn travels with the portaled window: rendered into document.body
+      // it is no longer inside the lesson shell, so without it the close button (which
+      // gets its sketch look from .theme-handdrawn .session-close, plus the --hd-* vars)
+      // would fall back to the plain base style.
+      className={`floating-window theme-handdrawn${interacting ? ' floating-window--interacting' : ''}`}
       role="dialog"
       aria-label={title}
       style={{ left: pos.x, top: pos.y, width: size.w, height: size.h }}
@@ -149,6 +158,7 @@ export function FloatingWindow({
         onPointerUp={endResize}
         onPointerCancel={endResize}
       />
-    </section>
+    </section>,
+    document.body,
   );
 }

@@ -11,14 +11,8 @@ export type Profile = {
   nameLower: string;
   email: string;
   photoURL: string | null;
-  /** Number of live lessons completed; the lesson half of the timeline position. */
+  /** Number of live lessons completed; doubles as the timeline node index. */
   completedCount: number;
-  /**
-   * Number of those lessons whose problem set is finished. Together with
-   * completedCount this places the avatar on the exact path node: the problem set
-   * of the last completed lesson while its set is open, otherwise the next lesson.
-   */
-  completedPsetCount: number;
   currentLessonId: string | null;
 };
 

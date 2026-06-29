@@ -1,0 +1,26 @@
+{
+  "problemId": "flux-flat-tilted",
+  "lessonId": "electric-flux",
+  "unitId": "electrostatics",
+  "skillIds": ["electric-flux"],
+  "principleIds": ["field-concept"],
+  "misconceptionTags": ["flux-ignores-angle", "flux-uses-sin"],
+  "kind": "single",
+  "difficulty": 4,
+  "difficultyBand": 4,
+  "difficultyFeatures": {
+    "steps": 4,
+    "symbolic": false,
+    "calculus": false,
+    "multiPart": false,
+    "hasTrap": true
+  },
+  "provenance": "authored",
+  "title": "Flux through a tilted surface",
+  "prompt": "A flat square surface with sides of 0.20 m sits in a uniform electric field of 300 N/C. The surface normal makes an angle of 30 degrees with the field. Find the electric flux through the surface.",
+  "givens": [
+    { "label": "field E", "value": "300 N/C" },
+    { "label": "square side", "value": "0.20 m" },
+    { "label": "angle of normal to field", "value": "30 degrees" }
+  ]
+}

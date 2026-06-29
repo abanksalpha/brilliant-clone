@@ -11,12 +11,12 @@ frontend/.env.*.local
 coverage
 frontend/coverage
 
-# build tool caches
-.vite
-frontend/.vite
-
 # subagent scratch
 .sdd/
+
+# verification scratch artifacts (screenshots, harnesses, probes)
+tmp/
+frontend/tmp/
 
 # backend functions build and secrets
 backend/functions/lib
@@ -26,4 +26,3 @@ backend/functions/.secret.local
 .DS_Store
 *-debug.log
 firebase-debug.log
-.vercel

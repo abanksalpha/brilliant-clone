@@ -1,6 +1,6 @@
 import { initializeApp, type FirebaseApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, type Auth } from 'firebase/auth';
-import { getFirestore, type Firestore } from 'firebase/firestore';
+import { initializeFirestore, type Firestore } from 'firebase/firestore';
 import { getFunctions, connectFunctionsEmulator, type Functions } from 'firebase/functions';
 
 const firebaseConfig = {
@@ -25,7 +25,13 @@ export const googleProvider = new GoogleAuthProvider();
 // Cloud Firestore: the single source of truth for user progress/XP/streak so it
 // persists across devices and sessions. Uses the default in-memory cache (no
 // durable local persistence) so nothing learner-specific is stored on-device.
-export const db: Firestore | null = app ? getFirestore(app) : null;
+// ignoreUndefinedProperties: a single undefined field anywhere in the document
+// (e.g. an optional field on a cached generated problem) would otherwise make the
+// whole setDoc throw and silently drop ALL progress for that write; dropping the
+// undefined field instead keeps persistence robust.
+export const db: Firestore | null = app
+  ? initializeFirestore(app, { ignoreUndefinedProperties: true })
+  : null;
 
 // Callable Cloud Functions (gradeAttempt, getHint). Null when Firebase is not
 // configured so callers can fail loudly rather than silently degrade.

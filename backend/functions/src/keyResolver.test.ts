@@ -38,16 +38,6 @@ describe('resolveProblemKey', () => {
     expect(fetchSynthesis).not.toHaveBeenCalled();
   });
 
-  it('resolves a v1: variant id to the derived key without calling the synthesis fetch', async () => {
-    const fetchSynthesis: SynthesisFetch = vi.fn(async () => null);
-    const variantId = 'v1:cl-field-point-charge:q=0.000003;r=2';
-
-    const resolved = await resolveProblemKey(variantId, fetchSynthesis);
-
-    expect(resolved).toEqual(getProblemKey(variantId));
-    expect(fetchSynthesis).not.toHaveBeenCalled();
-  });
-
   it('throws on an unknown plain id', async () => {
     const fetchSynthesis: SynthesisFetch = vi.fn(async () => null);
 

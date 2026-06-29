@@ -1,0 +1,25 @@
+{
+  "problemId": "eff-field-from-force",
+  "lessonId": "electric-field-field-lines",
+  "unitId": "electrostatics",
+  "skillIds": ["electric-field-field-lines"],
+  "principleIds": ["field-concept"],
+  "misconceptionTags": ["field-force-conflation", "field-defining-ratio-inverted"],
+  "kind": "single",
+  "difficulty": 4,
+  "difficultyBand": 4,
+  "difficultyFeatures": {
+    "steps": 3,
+    "symbolic": false,
+    "calculus": false,
+    "multiPart": false,
+    "hasTrap": true
+  },
+  "provenance": "authored",
+  "title": "Field from the force on a test charge",
+  "prompt": "A +2.0 microcoulomb test charge placed at a point feels an electric force of 0.18 N. Find the magnitude of the electric field at that point.",
+  "givens": [
+    { "label": "q", "value": "+2.0 microcoulomb" },
+    { "label": "F", "value": "0.18 N" }
+  ]
+}

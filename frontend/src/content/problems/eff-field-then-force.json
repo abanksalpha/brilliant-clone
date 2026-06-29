@@ -1,0 +1,26 @@
+{
+  "problemId": "eff-field-then-force",
+  "lessonId": "electric-field-field-lines",
+  "unitId": "electrostatics",
+  "skillIds": ["electric-field-field-lines", "coulombs-law"],
+  "principleIds": ["field-concept", "coulomb-force"],
+  "misconceptionTags": ["inverse-square-error", "field-force-conflation"],
+  "kind": "synthesis",
+  "difficulty": 5,
+  "difficultyBand": 5,
+  "difficultyFeatures": {
+    "steps": 5,
+    "symbolic": false,
+    "calculus": false,
+    "multiPart": false,
+    "hasTrap": true
+  },
+  "provenance": "authored",
+  "title": "From field to force on a negative charge",
+  "prompt": "A +6.0 microcoulomb charge is fixed at the origin. A -2.0 microcoulomb point charge is placed 0.30 m away. Find the magnitude of the electric force on the -2.0 microcoulomb charge by first finding the field of the source charge. Use k = 8.99e9 N m^2/C^2.",
+  "givens": [
+    { "label": "source charge at origin", "value": "+6.0 microcoulomb" },
+    { "label": "placed charge", "value": "-2.0 microcoulomb" },
+    { "label": "separation", "value": "0.30 m" }
+  ]
+}

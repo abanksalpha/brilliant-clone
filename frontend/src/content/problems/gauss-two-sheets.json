@@ -1,0 +1,20 @@
+{
+  "problemId": "gauss-two-sheets",
+  "lessonId": "gausss-law",
+  "unitId": "electrostatics",
+  "skillIds": ["gausss-law"],
+  "principleIds": ["symmetry-gauss", "field-concept"],
+  "misconceptionTags": ["between-uses-single-sheet", "between-double-counts"],
+  "kind": "single",
+  "difficulty": 5,
+  "difficultyBand": 5,
+  "difficultyFeatures": { "steps": 4, "symbolic": false, "calculus": false, "multiPart": false, "hasTrap": true },
+  "provenance": "authored",
+  "title": "Field between two charged sheets",
+  "prompt": "Two large parallel sheets carry equal and opposite uniform surface charge densities of magnitude 3.0e-8 C/m^2. Find the magnitude of the electric field in the region between them. Use epsilon_0 = 8.85e-12 C^2/(N m^2).",
+  "givens": [
+    { "label": "surface charge density magnitude sigma", "value": "3.0e-8 C/m^2" },
+    { "label": "arrangement", "value": "two parallel sheets, opposite signs" },
+    { "label": "epsilon_0", "value": "8.85e-12 C^2/(N m^2)" }
+  ]
+}

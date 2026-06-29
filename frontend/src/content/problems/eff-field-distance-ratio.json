@@ -1,0 +1,25 @@
+{
+  "problemId": "eff-field-distance-ratio",
+  "lessonId": "electric-field-field-lines",
+  "unitId": "electrostatics",
+  "skillIds": ["electric-field-field-lines"],
+  "principleIds": ["field-concept"],
+  "misconceptionTags": ["inverse-square-error", "field-distance-direction-error"],
+  "kind": "single",
+  "difficulty": 4,
+  "difficultyBand": 4,
+  "difficultyFeatures": {
+    "steps": 3,
+    "symbolic": true,
+    "calculus": false,
+    "multiPart": false,
+    "hasTrap": true
+  },
+  "provenance": "authored",
+  "title": "Scaling the field with distance",
+  "prompt": "The electric field 0.10 m from a point charge has magnitude 9.0e5 N/C. Find the magnitude of the electric field 0.30 m from the same charge.",
+  "givens": [
+    { "label": "E at 0.10 m", "value": "9.0e5 N/C" },
+    { "label": "second distance", "value": "0.30 m" }
+  ]
+}

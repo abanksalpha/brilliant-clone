@@ -1,0 +1,26 @@
+{
+  "problemId": "eff-field-null-point",
+  "lessonId": "electric-field-field-lines",
+  "unitId": "electrostatics",
+  "skillIds": ["electric-field-field-lines"],
+  "principleIds": ["field-concept", "superposition"],
+  "misconceptionTags": ["null-point-sqrt-omitted", "null-point-reference-error"],
+  "kind": "single",
+  "difficulty": 5,
+  "difficultyBand": 5,
+  "difficultyFeatures": {
+    "steps": 5,
+    "symbolic": true,
+    "calculus": false,
+    "multiPart": false,
+    "hasTrap": true
+  },
+  "provenance": "authored",
+  "title": "Null point between two like charges",
+  "prompt": "A +q charge and a +4q charge are fixed 0.60 m apart on a line. Find the distance from the +q charge to the point between them where the net electric field is zero.",
+  "givens": [
+    { "label": "charge at x = 0", "value": "+q" },
+    { "label": "charge at x = 0.60 m", "value": "+4q" },
+    { "label": "separation", "value": "0.60 m" }
+  ]
+}

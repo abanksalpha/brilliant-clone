@@ -1,0 +1,28 @@
+{
+  "problemId": "cci-shell-outer-field",
+  "lessonId": "charging-conductors-insulators",
+  "unitId": "electrostatics",
+  "skillIds": ["charging-conductors-insulators"],
+  "principleIds": ["conductor-equilibrium", "field-concept"],
+  "misconceptionTags": ["conductor-double-counts-charge", "inverse-square-error"],
+  "kind": "single",
+  "difficulty": 5,
+  "difficultyBand": 5,
+  "difficultyFeatures": {
+    "steps": 4,
+    "symbolic": false,
+    "calculus": false,
+    "multiPart": true,
+    "hasTrap": true
+  },
+  "provenance": "authored",
+  "title": "Field outside a charged shell",
+  "prompt": "A +5.0 nC point charge sits at the center of a neutral hollow metal sphere with inner radius 0.10 m and outer radius 0.20 m. Find the magnitude of the electric field at a point 0.40 m from the center. Use k = 8.99e9 N m^2/C^2.",
+  "givens": [
+    { "label": "central charge q", "value": "+5.0 nC" },
+    { "label": "shell net charge", "value": "0 (neutral)" },
+    { "label": "inner radius", "value": "0.10 m" },
+    { "label": "outer radius", "value": "0.20 m" },
+    { "label": "field point distance", "value": "0.40 m" }
+  ]
+}

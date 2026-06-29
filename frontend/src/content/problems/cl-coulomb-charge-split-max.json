@@ -1,0 +1,24 @@
+{
+  "problemId": "cl-coulomb-charge-split-max",
+  "lessonId": "coulombs-law",
+  "unitId": "electrostatics",
+  "skillIds": ["coulombs-law"],
+  "principleIds": ["coulomb-force"],
+  "misconceptionTags": ["optimization-endpoint-error"],
+  "kind": "single",
+  "difficulty": 5,
+  "difficultyBand": 5,
+  "difficultyFeatures": {
+    "steps": 4,
+    "symbolic": true,
+    "calculus": true,
+    "multiPart": false,
+    "hasTrap": true
+  },
+  "provenance": "authored",
+  "title": "Split a charge to maximize the force",
+  "prompt": "A total charge of 12 microcoulomb is split between two small spheres that are held a fixed distance apart. One sphere carries a charge q and the other carries the remaining 12 microcoulomb minus q. Find the value of q that makes the electric force between the two spheres as large as possible.",
+  "givens": [
+    { "label": "total charge to split", "value": "12 microcoulomb" }
+  ]
+}

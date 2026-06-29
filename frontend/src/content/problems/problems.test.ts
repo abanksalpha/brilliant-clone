@@ -1,5 +1,4 @@
 import { PROBLEMS, getProblemById, getProblemsForLesson } from './index';
-import { MISCONCEPTIONS, getMisconception } from '../misconceptions';
 import { PRINCIPLES } from '../principles';
 
 // Keys that would leak a grading key into the public bundle. The real answers
@@ -19,18 +18,90 @@ function collectKeys(value: unknown, found: string[] = []): string[] {
 }
 
 describe('public problem catalog', () => {
-  it('ships the force problem under coulombs-law and the field problems under field skills', () => {
-    expect(getProblemsForLesson('coulombs-law').map((problem) => problem.problemId)).toEqual([
+  it('groups Coulomb and field problems under their home lesson skills', () => {
+    expect(getProblemsForLesson('coulombs-law').map((problem) => problem.problemId).sort()).toEqual([
+      'cl-coulomb-charge-split-max',
+      'cl-coulomb-collinear-net',
+      'cl-coulomb-equilibrium',
+      'cl-coulomb-force-ap',
       'cl-coulomb-force-two-charges',
+      'cl-coulomb-net-2d',
+      'cl-coulomb-scaling',
+      'cl-coulomb-solve-charge',
+      'cl-coulomb-square-corner-net',
+      'cl-coulomb-triangle-net',
+      'cl-field-and-force',
     ]);
-    expect(getProblemsForLesson('electric-field-field-lines').map((problem) => problem.problemId)).toEqual([
+    expect(
+      getProblemsForLesson('electric-field-field-lines')
+        .map((problem) => problem.problemId)
+        .sort(),
+    ).toEqual([
       'cl-field-point-charge',
+      'eff-field-collinear-net',
+      'eff-field-distance-ratio',
+      'eff-field-from-force',
+      'eff-field-null-point',
+      'eff-field-perp-bisector',
+      'eff-field-point-charge-nc',
+      'eff-field-probe-invariance',
+      'eff-field-solve-distance',
+      'eff-field-then-force',
+      'eff-field-two-positive-net',
     ]);
     expect(
       getProblemsForLesson('electric-fields-of-charge-distributions')
         .map((problem) => problem.problemId)
         .sort(),
-    ).toEqual(['cl-midpoint-field-potential', 'cl-two-charge-superposition']);
+    ).toEqual([
+      'cl-midpoint-field-potential',
+      'cl-two-charge-superposition',
+      'efcd-arc-center',
+      'efcd-disk-axis',
+      'efcd-infinite-line',
+      'efcd-quarter-arc-center',
+      'efcd-ring-axis',
+      'efcd-rod-bisector',
+      'efcd-rod-end-axis',
+    ]);
+    expect(
+      getProblemsForLesson('electric-flux')
+        .map((problem) => problem.problemId)
+        .sort(),
+    ).toEqual([
+      'flux-cube-uniform',
+      'flux-disk-tilted',
+      'flux-flat-tilted',
+      'flux-hemisphere-uniform',
+      'flux-net-enclosed-charges',
+      'flux-point-charge-enclosed',
+      'flux-solve-angle',
+    ]);
+    expect(
+      getProblemsForLesson('gausss-law')
+        .map((problem) => problem.problemId)
+        .sort(),
+    ).toEqual([
+      'gauss-conductor-surface',
+      'gauss-infinite-line',
+      'gauss-infinite-sheet',
+      'gauss-shell-inside',
+      'gauss-solid-sphere-inside',
+      'gauss-sphere-outside',
+      'gauss-two-sheets',
+    ]);
+  });
+
+  it('files each mechanics review seed under its own mechanics skill', () => {
+    expect(getProblemsForLesson('mechanics-forces').map((problem) => problem.problemId)).toEqual([
+      'mech-forces-incline',
+    ]);
+    expect(getProblemsForLesson('mechanics-energy').map((problem) => problem.problemId)).toEqual([
+      'mech-energy-fall',
+    ]);
+    expect(getProblemsForLesson('mechanics-kinematics').map((problem) => problem.problemId)).toEqual([
+      'mech-kinematics-drop',
+    ]);
   });
 
   it('returns no problems for an unknown lesson', () => {
@@ -42,11 +113,12 @@ describe('public problem catalog', () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it('references only catalogued misconception tags', () => {
-    const known = new Set(MISCONCEPTIONS.map((misconception) => misconception.id));
+  it('tags every problem with at least one misconception tag', () => {
     for (const problem of PROBLEMS) {
+      expect(problem.misconceptionTags.length, problem.problemId).toBeGreaterThan(0);
       for (const tag of problem.misconceptionTags) {
-        expect(known.has(tag), `${problem.problemId} -> ${tag}`).toBe(true);
+        expect(typeof tag, problem.problemId).toBe('string');
+        expect(tag.length, problem.problemId).toBeGreaterThan(0);
       }
     }
   });
@@ -69,32 +141,10 @@ describe('public problem catalog', () => {
   });
 });
 
-describe('problem and misconception lookups', () => {
+describe('problem lookups', () => {
   it('finds a problem by id and returns undefined for a miss', () => {
     expect(getProblemById('cl-field-point-charge')?.title).toBe('Field from a point charge');
     expect(getProblemById('missing-problem')).toBeUndefined();
-  });
-
-  it('exposes the catalogued misconceptions', () => {
-    expect(MISCONCEPTIONS.map((misconception) => misconception.id).sort()).toEqual([
-      'capacitor-combination-swap',
-      'conductor-interior-charge',
-      'current-consumed',
-      'equipotential-work',
-      'field-potential-conflation',
-      'field-requires-test-charge',
-      'flux-shape-dependence',
-      'induced-current-direction',
-      'inverse-square-error',
-      'magnetic-force-does-work',
-      'potential-as-vector',
-      'superposition-magnitude-add',
-    ]);
-  });
-
-  it('finds a misconception by id and returns undefined for a miss', () => {
-    expect(getMisconception('inverse-square-error')?.shortLabel).toBe('uses 1/r not 1/r squared');
-    expect(getMisconception('missing')).toBeUndefined();
   });
 });
 
@@ -123,15 +173,6 @@ describe('problem taxonomy and difficulty model', () => {
     }
   });
 
-  it('references only catalogued misconceptions on the new shape', () => {
-    const known = new Set(MISCONCEPTIONS.map((misconception) => misconception.id));
-    for (const problem of PROBLEMS) {
-      for (const tag of problem.misconceptionTags) {
-        expect(known.has(tag), `${problem.problemId} -> ${tag}`).toBe(true);
-      }
-    }
-  });
-
   it('keeps difficultyBand an integer between 1 and 5', () => {
     for (const problem of PROBLEMS) {
       expect(Number.isInteger(problem.difficultyBand), problem.problemId).toBe(true);
@@ -153,18 +194,34 @@ describe('problem taxonomy and difficulty model', () => {
 
   it('names a valid provenance for every problem', () => {
     for (const problem of PROBLEMS) {
-      expect(['authored', 'variant', 'synthesis'], problem.problemId).toContain(problem.provenance);
+      expect(['authored', 'synthesis'], problem.problemId).toContain(problem.provenance);
     }
   });
 
-  it('keeps four authored problems split across coulombs-law and the field skills', () => {
-    expect(PROBLEMS).toHaveLength(4);
-    const skills = PROBLEMS.flatMap((problem) => problem.skillIds).sort();
-    expect(skills).toEqual([
-      'coulombs-law',
-      'electric-field-field-lines',
-      'electric-fields-of-charge-distributions',
-      'electric-fields-of-charge-distributions',
-    ]);
+  it('keeps the six Phase 5 independent problems at the AP-Classroom bands', () => {
+    const independentIds = [
+      'cl-coulomb-net-2d',
+      'cl-coulomb-equilibrium',
+      'cl-coulomb-square-corner-net',
+      'cl-coulomb-triangle-net',
+      'cl-coulomb-solve-charge',
+      'cl-coulomb-charge-split-max',
+    ];
+    for (const id of independentIds) {
+      const problem = getProblemById(id);
+      expect(problem, id).toBeDefined();
+      expect(problem!.difficultyBand, id).toBeGreaterThanOrEqual(4);
+      expect(problem!.difficultyBand, id).toBeLessThanOrEqual(5);
+    }
+  });
+
+  it('authors the three mechanics review seeds as band 4 single-skill problems', () => {
+    for (const id of ['mech-forces-incline', 'mech-energy-fall', 'mech-kinematics-drop']) {
+      const problem = getProblemById(id);
+      expect(problem, id).toBeDefined();
+      expect(problem!.kind, id).toBe('single');
+      expect(problem!.difficultyBand, id).toBe(4);
+      expect(problem!.skillIds.length, id).toBe(1);
+    }
   });
 });

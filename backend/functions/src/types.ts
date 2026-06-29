@@ -26,8 +26,23 @@ export type GradeInput = {
   knownMisconceptions: KnownMisconception[];   // this student's existing signatures
   allowedPrincipleIds: string[];               // principle ids a new proposal may use
 };
-export type HintInput = { problemId: string; imagePngBase64: string; lines: LineRef[]; tier: 0 | 1 | 2 };
+// Hints escalate without a fixed ceiling: `level` is the 0-based index of the
+// hint being requested (how many were already given), and `priorHints` carries
+// the text of those earlier hints so the model can go strictly deeper and never
+// repeat itself.
+export type HintInput = {
+  problemId: string;
+  imagePngBase64: string;
+  lines: LineRef[];
+  level: number;
+  priorHints: string[];
+};
 export type AskInput = { problemId: string; imagePngBase64: string; lines: LineRef[]; question: string };
+
+// A worked example self-explanation: the conceptual `question` the student was
+// asked after the full solution was revealed, and their typed `answer`. There is
+// no handwriting image; the solution is grounded from the problem key server side.
+export type ExplainFeedbackInput = { problemId: string; question: string; answer: string };
 
 export type GradeResult = {
   isCorrect: boolean;
@@ -39,9 +54,14 @@ export type GradeResult = {
   conceptMatch?: ConceptMatch;       // present only when errorType is 'concept'
 };
 
-export type HintResult = { tier: 0 | 1 | 2; text: string; targetLineId: string | null };
+export type HintResult = { level: number; text: string; targetLineId: string | null };
 
 export type AskResult = { answer: string };
+
+// Formative feedback on a self-explanation: `feedback` speaks to the student in
+// the second person, and `isOnTrack` is whether their explanation captures the
+// core idea (used only to style the response; it never blocks progress).
+export type ExplainFeedbackResult = { feedback: string; isOnTrack: boolean };
 
 export type ProblemKey = {
   problemId: string;
@@ -72,27 +92,52 @@ export type SynthesisCandidate = {
   finalAnswer: string;
   rubric: string;
   flaws: SynthesisFlaw[];
+  // A short, specific display name the model proposes (the planned-problem prompt
+  // requests it, and the planner's title is carried onto the verified candidate).
+  title?: string;
 };
 
-// A re-numbered problem is described by a template plus a set of numeric
-// parameters. A ParamRange bounds one parameter; ParamSpec is the full set of
-// ranges for a template; VariantParams is one concrete choice of values.
-export type ParamRange = { min: number; max: number; step: number };
-export type ParamSpec = Record<string, ParamRange>;
-export type VariantParams = Record<string, number>;
+// One target misconception passed from the client through both pipeline stages
+// unchanged: the node to credit, the principle it corrupts, and the wrong belief
+// the generated problem must make decide the answer.
+export type TargetMisconception = { nodeId: string; principleId: string; wrongBelief: string };
 
-// A SeedTemplate computes its own correct answer and each misconception's buggy
-// answer in code, so any variant's key is re-derivable from its parameters at
-// grade time without a database. These are server only: never export them or the
-// answers they compute to any frontend path.
-export type SeedTemplate = {
-  templateId: string;
+// Stage 1 input. One PlanSlot per generated problem in display order; the planner
+// proposes a distinct scenario per slot. Scope and misconceptions are forwarded
+// to Stage 2 unchanged (the planner never assigns scope).
+export type PlanSlot = {
   skillIds: string[];
   principleIds: string[];
   difficultyBand: number;
-  paramSpec: ParamSpec;
-  renderStatement: (p: VariantParams) => string;
-  solve: (p: VariantParams) => { correctSolution: string[]; finalAnswer: string };
-  rubric: string;
-  flaws: { misconceptionId: string; buggyPath: (p: VariantParams) => string }[];
+  kind: 'single' | 'synthesis';
+  requireChain: boolean;
+  targetMisconceptions: TargetMisconception[];
+};
+
+export type PlanProblemSetInput = {
+  slots: PlanSlot[];
+  existingStatements: string[]; // authored problems already in the set, to avoid
+  lessonTitle: string;          // light context for better descriptions
+};
+
+// Stage 1 output. One plan per slot (slotIndex back into the input slots): a
+// specific title and a 1 to 2 sentence scenario sketch, never the full problem or
+// its answer. Descriptions are mutually distinct by construction.
+export type ProblemPlan = {
+  slotIndex: number;
+  title: string;
+  description: string;
+};
+
+// Stage 2 input. A slot's scope plus the planned scenario and title that the
+// generated problem must realize exactly.
+export type PlannedProblemInput = {
+  skillIds: string[];
+  principleIds: string[];
+  difficultyBand: number;
+  requireChain: boolean;
+  targetMisconceptions: TargetMisconception[];
+  pastPrincipleIds?: string[];
+  description: string;
+  title: string;
 };

@@ -1,0 +1,19 @@
+{
+  "problemId": "gauss-infinite-line",
+  "lessonId": "gausss-law",
+  "unitId": "electrostatics",
+  "skillIds": ["gausss-law"],
+  "principleIds": ["symmetry-gauss", "field-concept"],
+  "misconceptionTags": ["line-uses-inverse-square", "line-omits-factor-2"],
+  "kind": "single",
+  "difficulty": 4,
+  "difficultyBand": 4,
+  "difficultyFeatures": { "steps": 3, "symbolic": false, "calculus": false, "multiPart": false, "hasTrap": true },
+  "provenance": "authored",
+  "title": "Field of a long charged wire",
+  "prompt": "A very long straight wire carries a uniform linear charge density of 5.0e-8 C/m. Find the magnitude of the electric field 0.080 m from the wire. Use k = 8.99e9 N m^2/C^2.",
+  "givens": [
+    { "label": "linear charge density lambda", "value": "5.0e-8 C/m" },
+    { "label": "distance from the wire r", "value": "0.080 m" }
+  ]
+}

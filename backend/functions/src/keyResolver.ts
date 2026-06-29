@@ -3,7 +3,7 @@ import type { ProblemKey } from './types';
 
 export type SynthesisFetch = (problemId: string) => Promise<ProblemKey | null>;
 
-// Resolve any problemId to its grading key. Static and v1: variant ids derive
+// Resolve any problemId to its grading key. An authored static id derives
 // synchronously via getProblemKey; a syn: id is fetched through the injected
 // boundary. A missing synthesis problem throws (no fallback).
 export async function resolveProblemKey(problemId: string, fetchSynthesis: SynthesisFetch): Promise<ProblemKey> {

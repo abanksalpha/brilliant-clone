@@ -1,0 +1,20 @@
+{
+  "problemId": "gauss-shell-inside",
+  "lessonId": "gausss-law",
+  "unitId": "electrostatics",
+  "skillIds": ["gausss-law"],
+  "principleIds": ["symmetry-gauss", "field-concept"],
+  "misconceptionTags": ["inside-uses-point", "inside-uses-surface"],
+  "kind": "single",
+  "difficulty": 4,
+  "difficultyBand": 4,
+  "difficultyFeatures": { "steps": 3, "symbolic": false, "calculus": false, "multiPart": false, "hasTrap": true },
+  "provenance": "authored",
+  "title": "Field inside a charged shell",
+  "prompt": "A thin spherical shell of radius 0.10 m carries a uniformly distributed charge of +6.0 nC. Find the magnitude of the electric field at a point 0.040 m from the center, inside the shell. Use k = 8.99e9 N m^2/C^2.",
+  "givens": [
+    { "label": "shell charge Q", "value": "+6.0 nC" },
+    { "label": "shell radius R", "value": "0.10 m" },
+    { "label": "distance from center r", "value": "0.040 m, inside" }
+  ]
+}

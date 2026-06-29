@@ -1,0 +1,25 @@
+{
+  "problemId": "flux-hemisphere-uniform",
+  "lessonId": "electric-flux",
+  "unitId": "electrostatics",
+  "skillIds": ["electric-flux"],
+  "principleIds": ["field-concept", "symmetry-gauss"],
+  "misconceptionTags": ["flux-uses-curved-area", "flux-radius-diameter"],
+  "kind": "single",
+  "difficulty": 5,
+  "difficultyBand": 5,
+  "difficultyFeatures": {
+    "steps": 4,
+    "symbolic": false,
+    "calculus": false,
+    "multiPart": false,
+    "hasTrap": true
+  },
+  "provenance": "authored",
+  "title": "Flux through a hemisphere",
+  "prompt": "A hemispherical surface of radius 0.050 m sits in a uniform electric field of 400 N/C, with the field parallel to the axis of the hemisphere. Find the electric flux through the curved part of the hemisphere.",
+  "givens": [
+    { "label": "hemisphere radius", "value": "0.050 m" },
+    { "label": "field E", "value": "400 N/C, parallel to the axis" }
+  ]
+}

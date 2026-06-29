@@ -1,5 +1,6 @@
 import type { MasteryMap, MisconceptionMastery } from '../mastery/types';
 import type { MisconceptionGraph, MisconceptionNode } from '../mastery/misconceptionGraph';
+import type { Problem, ProblemPlan } from '../content/problemSchema';
 
 export type LiveLesson = {
   lessonId: string;
@@ -13,21 +14,43 @@ export type ProblemAttempt = {
   hintsUsed: number;
 };
 
+// A learner's resume position inside a lesson's five-phase session: which phase
+// (0..4) and how far within it (a 0-based index the phase interprets).
+export type LessonPhasePosition = {
+  phase: number;
+  within: number;
+};
+
 export type DashboardProgress = {
   completedLessonIds: string[];
   // Lesson ids whose post-lesson problem set the learner has finished. The set is
-  // composed dynamically (template variants and generated review problems), so its
+  // composed dynamically (authored problems plus on-the-fly generated ones), so its
   // solved ids never match a fixed authored bank; this explicit marker is the
   // durable "set complete" signal that gates the next lesson.
   completedProblemSetIds: string[];
   completionDates: Record<string, string>;
   lastOpenedLessonId: string | null;
   answeredQuestionIds: string[];
+  // The learner's single running earned-XP counter (the lifetime `totalXp` shown
+  // in the UI). Every graded problem's first solve adds XP_PER_PROBLEM here via
+  // awardProblemXp; in-lesson questions and lesson completion add 0. Kept named
+  // `questionXp` for back-compat with already-persisted Firestore documents.
   questionXp: number;
   dailyXp: Record<string, number>;
   misconceptions: MasteryMap;
   problemAttempts: Record<string, ProblemAttempt>;
   misconceptionGraph: MisconceptionGraph;
+  // Resume position per lesson id for the five-phase session.
+  lessonPhase: Record<string, LessonPhasePosition>;
+  // Cached generated problem sets, keyed e.g. "<lessonId>:review" / "<lessonId>:solve".
+  // Generated `syn:` statements are not client-re-derivable, so a built set is kept
+  // here for resume rather than regenerated.
+  generatedSets: Record<string, Problem[]>;
+  // The planner's descriptions for each generated set, keyed the same as
+  // generatedSets. Persisting the plan is what makes resume regenerate the same
+  // missing problems from the same descriptions rather than re-planning into a
+  // different set.
+  generatedPlans: Record<string, ProblemPlan[]>;
 };
 
 export const LIVE_LESSONS: LiveLesson[] = [
@@ -41,12 +64,37 @@ export const LIVE_LESSONS: LiveLesson[] = [
     sequence: 2,
     title: 'Charging, Conductors & Insulators',
   },
+  {
+    lessonId: 'electric-field-field-lines',
+    sequence: 3,
+    title: 'Electric Field & Field Lines',
+  },
+  {
+    lessonId: 'electric-fields-of-charge-distributions',
+    sequence: 4,
+    title: 'Electric Fields of Charge Distributions',
+  },
+  {
+    lessonId: 'electric-flux',
+    sequence: 5,
+    title: 'Electric Flux',
+  },
+  {
+    lessonId: 'gausss-law',
+    sequence: 6,
+    title: "Gauss's Law",
+  },
 ];
 
 export const LIVE_LESSON_IDS = LIVE_LESSONS.map((lesson) => lesson.lessonId);
 export const LIVE_LESSON_LIMIT = LIVE_LESSON_IDS.length;
-export const XP_PER_LESSON = 120;
-export const XP_PER_QUESTION = 10;
+// XP is earned per graded problem solved (see awardProblemXp): 50 XP on the
+// first solve of each problem. A full lesson's ~11 graded problems clear the
+// 500 daily goal (~550 XP). The old lesson-completion and per-question bonuses
+// were redistributed onto the problems, so both are 0 now.
+export const XP_PER_LESSON = 0;
+export const XP_PER_QUESTION = 0;
+export const XP_PER_PROBLEM = 50;
 export const DAILY_XP_GOAL = 500;
 
 export const EMPTY_PROGRESS: DashboardProgress = {
@@ -60,6 +108,9 @@ export const EMPTY_PROGRESS: DashboardProgress = {
   misconceptions: {},
   problemAttempts: {},
   misconceptionGraph: {},
+  lessonPhase: {},
+  generatedSets: {},
+  generatedPlans: {},
 };
 
 function toLocalDateStamp(date: Date) {
@@ -180,6 +231,9 @@ export function normalizeProgress(raw: unknown): DashboardProgress {
       misconceptions: normalizeMisconceptions(parsed.misconceptions),
       problemAttempts: normalizeProblemAttempts(parsed.problemAttempts),
       misconceptionGraph: normalizeMisconceptionGraph(parsed.misconceptionGraph),
+      lessonPhase: normalizeLessonPhase(parsed.lessonPhase),
+      generatedSets: normalizeGeneratedSets(parsed.generatedSets),
+      generatedPlans: normalizeGeneratedPlans(parsed.generatedPlans),
     };
   } catch {
     return EMPTY_PROGRESS;
@@ -372,6 +426,147 @@ function normalizeMisconceptionGraph(value: unknown): MisconceptionGraph {
   return normalized;
 }
 
+/**
+ * Normalizes an untrusted lessonPhase field (e.g. a Firestore map) into a safe
+ * record. Malformed entries are dropped; phase is clamped to 0..4 and within to
+ * a non-negative integer so a corrupt cloud value can never push the session out
+ * of range.
+ */
+function normalizeLessonPhase(value: unknown): Record<string, LessonPhasePosition> {
+  if (!value || typeof value !== 'object') {
+    return {};
+  }
+
+  const normalized: Record<string, LessonPhasePosition> = {};
+  for (const [lessonId, entry] of Object.entries(value as Record<string, unknown>)) {
+    if (!entry || typeof entry !== 'object') continue;
+    const candidate = entry as Record<string, unknown>;
+    if (!isFiniteNumber(candidate.phase) || !isFiniteNumber(candidate.within)) continue;
+    normalized[lessonId] = {
+      phase: Math.min(4, Math.max(0, Math.trunc(candidate.phase))),
+      within: Math.max(0, Math.trunc(candidate.within)),
+    };
+  }
+  return normalized;
+}
+
+/**
+ * Coerces one untrusted persisted value into a cached generated problem set.
+ * Returns null when the value is not an array, or when any item is missing the
+ * public fields the builders always produce (string problemId, prompt, title,
+ * and a finite difficultyBand), so the caller can drop the whole entry and the
+ * builder regenerates it rather than rendering a malformed problem. Items that
+ * pass are kept verbatim so a save then load round-trips exactly.
+ */
+function coerceGeneratedSet(value: unknown): Problem[] | null {
+  if (!Array.isArray(value)) {
+    return null;
+  }
+
+  const problems: Problem[] = [];
+  for (const item of value) {
+    if (!item || typeof item !== 'object') {
+      return null;
+    }
+    const candidate = item as Record<string, unknown>;
+    if (
+      typeof candidate.problemId !== 'string' ||
+      typeof candidate.prompt !== 'string' ||
+      typeof candidate.title !== 'string' ||
+      !isFiniteNumber(candidate.difficultyBand)
+    ) {
+      return null;
+    }
+    // planSlotIndex is optional, but when present it must be a finite integer (the
+    // plan slot a generated problem realizes). A malformed one drops the whole
+    // entry, like the other validators, so that slot regenerates as missing.
+    if (candidate.planSlotIndex !== undefined && !Number.isInteger(candidate.planSlotIndex)) {
+      return null;
+    }
+    problems.push(item as Problem);
+  }
+
+  return problems;
+}
+
+/**
+ * Normalizes an untrusted generatedSets field (e.g. a Firestore map) into a safe
+ * record of cached problem sets. Missing or non-object input defaults to an
+ * empty map (back-compatible with documents written before generated sets
+ * existed) and a malformed entry (not an array, or an array with a bad item) is
+ * dropped rather than throwing, so the builder regenerates that set.
+ */
+function normalizeGeneratedSets(value: unknown): Record<string, Problem[]> {
+  if (!value || typeof value !== 'object') {
+    return {};
+  }
+
+  const normalized: Record<string, Problem[]> = {};
+  for (const [key, entry] of Object.entries(value as Record<string, unknown>)) {
+    const problems = coerceGeneratedSet(entry);
+    if (problems) {
+      normalized[key] = problems;
+    }
+  }
+
+  return normalized;
+}
+
+/**
+ * Coerces one untrusted persisted value into a cached plan: an array of
+ * {@link ProblemPlan} with a finite slotIndex and string title/description.
+ * Returns null when the value is not an array or any item is malformed, so the
+ * caller can drop the whole entry and the builder re-plans rather than resuming
+ * from a corrupt plan. Items that pass are kept verbatim so a save then load
+ * round-trips exactly.
+ */
+function coerceGeneratedPlan(value: unknown): ProblemPlan[] | null {
+  if (!Array.isArray(value)) {
+    return null;
+  }
+
+  const plans: ProblemPlan[] = [];
+  for (const item of value) {
+    if (!item || typeof item !== 'object') {
+      return null;
+    }
+    const candidate = item as Record<string, unknown>;
+    if (
+      !isFiniteNumber(candidate.slotIndex) ||
+      typeof candidate.title !== 'string' ||
+      typeof candidate.description !== 'string'
+    ) {
+      return null;
+    }
+    plans.push(item as ProblemPlan);
+  }
+
+  return plans;
+}
+
+/**
+ * Normalizes an untrusted generatedPlans field (e.g. a Firestore map) into a safe
+ * record of cached plans. Missing or non-object input defaults to an empty map
+ * (back-compatible with documents written before generated plans existed) and a
+ * malformed entry (not an array, or an array with a bad item) is dropped rather
+ * than throwing, so the builder re-plans that set.
+ */
+function normalizeGeneratedPlans(value: unknown): Record<string, ProblemPlan[]> {
+  if (!value || typeof value !== 'object') {
+    return {};
+  }
+
+  const normalized: Record<string, ProblemPlan[]> = {};
+  for (const [key, entry] of Object.entries(value as Record<string, unknown>)) {
+    const plans = coerceGeneratedPlan(entry);
+    if (plans) {
+      normalized[key] = plans;
+    }
+  }
+
+  return normalized;
+}
+
 function addDailyXp(dailyXp: Record<string, number>, amount: number, at: Date): Record<string, number> {
   const stamp = toLocalDateStamp(at);
   return {
@@ -392,6 +587,40 @@ export function markLessonOpened(progress: DashboardProgress, lessonId: string):
   return {
     ...progress,
     lastOpenedLessonId: lessonId,
+  };
+}
+
+/**
+ * The learner's resume position inside a lesson, defaulting to the start
+ * (phase 0, within 0) for any lesson never opened.
+ */
+export function getLessonPhase(progress: DashboardProgress, lessonId: string): LessonPhasePosition {
+  return progress.lessonPhase[lessonId] ?? { phase: 0, within: 0 };
+}
+
+/**
+ * Records the learner's position inside a lesson's five-phase session. Phase is
+ * clamped to 0..4 and within to a non-negative integer. Idempotent: an unchanged
+ * position returns the same object so no redundant cloud write is triggered.
+ */
+export function setLessonPhase(
+  progress: DashboardProgress,
+  lessonId: string,
+  phase: number,
+  within: number,
+): DashboardProgress {
+  const safePhase = Math.min(4, Math.max(0, Math.trunc(Number.isFinite(phase) ? phase : 0)));
+  const safeWithin = Math.max(0, Math.trunc(Number.isFinite(within) ? within : 0));
+  const existing = progress.lessonPhase[lessonId];
+  if (existing && existing.phase === safePhase && existing.within === safeWithin) {
+    return progress;
+  }
+  return {
+    ...progress,
+    lessonPhase: {
+      ...progress.lessonPhase,
+      [lessonId]: { phase: safePhase, within: safeWithin },
+    },
   };
 }
 
@@ -422,6 +651,9 @@ export function markLessonCompleted(progress: DashboardProgress, lessonId: strin
     misconceptions: progress.misconceptions,
     problemAttempts: progress.problemAttempts,
     misconceptionGraph: progress.misconceptionGraph,
+    lessonPhase: progress.lessonPhase,
+    generatedSets: progress.generatedSets,
+    generatedPlans: progress.generatedPlans,
   };
 }
 
@@ -464,15 +696,59 @@ export function markQuestionAnswered(
   };
 }
 
+/**
+ * Awards XP for solving a graded problem, but only on its first solve. Dedups on
+ * the problem's existing solve record: when `problemAttempts[problemId]` already
+ * carries a `solvedISO` (or the incoming result is not a solve), no XP is
+ * awarded, so re-solving a problem can never farm XP. It keys on the arbitrary
+ * `problemId` — authored, generated `syn:`, or `lessonId:phase:index` review ids
+ * all work — rather than the `lessonId:step` question ledger, so every graded
+ * problem the player records is covered.
+ *
+ * A first solve adds XP_PER_PROBLEM to the single running counter (`questionXp`)
+ * and to today's `dailyXp`, which is what advances the daily goal and streak.
+ * When nothing is due the same `progress` object is returned so callers can
+ * skip a redundant write.
+ */
+export function awardProblemXp(
+  progress: DashboardProgress,
+  problemId: string,
+  solved: boolean,
+  at = new Date(),
+): { nextProgress: DashboardProgress; awardedXp: number } {
+  const alreadySolved = progress.problemAttempts[problemId]?.solvedISO !== undefined;
+  if (!solved || alreadySolved) {
+    return { nextProgress: progress, awardedXp: 0 };
+  }
+
+  return {
+    nextProgress: {
+      ...progress,
+      questionXp: progress.questionXp + XP_PER_PROBLEM,
+      dailyXp: addDailyXp(progress.dailyXp, XP_PER_PROBLEM, at),
+    },
+    awardedXp: XP_PER_PROBLEM,
+  };
+}
+
 export function calculateStreakDays(
   progress: Pick<DashboardProgress, 'completionDates' | 'dailyXp'>,
   now: Date = new Date(),
 ) {
   // A day counts toward the streak if a lesson was completed that day or the
-  // daily XP goal was reached (or surpassed) that day.
-  const qualifyingDays = new Set<string>(Object.values(progress.completionDates));
+  // daily XP goal was reached (or surpassed) that day. Days after today (from
+  // clock skew, a timezone change, or tampered cloud data) are ignored so a
+  // future stamp can never anchor or pad the streak; stamps are zero-padded
+  // YYYY-MM-DD, so a string compare matches calendar order.
+  const todayStamp = toLocalDateStamp(now);
+  const qualifyingDays = new Set<string>();
+  for (const day of Object.values(progress.completionDates)) {
+    if (day <= todayStamp) {
+      qualifyingDays.add(day);
+    }
+  }
   for (const [day, xp] of Object.entries(progress.dailyXp)) {
-    if (xp >= DAILY_XP_GOAL) {
+    if (xp >= DAILY_XP_GOAL && day <= todayStamp) {
       qualifyingDays.add(day);
     }
   }
@@ -484,7 +760,6 @@ export function calculateStreakDays(
 
   // The streak is live only if the most recent qualifying day was today or
   // yesterday; a gap of two or more days breaks it.
-  const todayStamp = toLocalDateStamp(now);
   const latest = uniqueDays[uniqueDays.length - 1]!;
   if (calendarDaySpan(latest, todayStamp) > 1) {
     return 0;

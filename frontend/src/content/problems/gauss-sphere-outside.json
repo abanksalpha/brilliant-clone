@@ -1,0 +1,20 @@
+{
+  "problemId": "gauss-sphere-outside",
+  "lessonId": "gausss-law",
+  "unitId": "electrostatics",
+  "skillIds": ["gausss-law"],
+  "principleIds": ["symmetry-gauss", "field-concept"],
+  "misconceptionTags": ["gauss-surface-not-distance", "inverse-square-error"],
+  "kind": "single",
+  "difficulty": 4,
+  "difficultyBand": 4,
+  "difficultyFeatures": { "steps": 4, "symbolic": false, "calculus": false, "multiPart": false, "hasTrap": true },
+  "provenance": "authored",
+  "title": "Field outside a charged sphere",
+  "prompt": "A solid sphere of radius 0.10 m carries a uniformly distributed charge of +8.0 nC. Find the magnitude of the electric field at a point 0.20 m from the center. Use k = 8.99e9 N m^2/C^2.",
+  "givens": [
+    { "label": "sphere charge Q", "value": "+8.0 nC" },
+    { "label": "sphere radius R", "value": "0.10 m" },
+    { "label": "distance from center r", "value": "0.20 m" }
+  ]
+}

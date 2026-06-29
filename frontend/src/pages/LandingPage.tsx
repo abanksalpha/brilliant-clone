@@ -9,6 +9,7 @@ import {
 import { Link, Navigate } from 'react-router-dom';
 import { GraduationCap } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
+import { useProgress } from '../progress/ProgressContext';
 
 const COURSE_GROUPS = [
   {
@@ -448,9 +449,19 @@ function FieldSketch() {
 
 export function LandingPage() {
   const { currentUser } = useAuth();
+  const { progress, isLoading } = useProgress();
 
+  // A signed-in learner is sent straight back into the lesson they were most
+  // recently in (resuming where they left off) when it isn't finished yet;
+  // otherwise to the dashboard. Wait for cloud progress so the target is known.
   if (currentUser) {
-    return <Navigate to="/dashboard" replace />;
+    if (isLoading) {
+      return null;
+    }
+    const resumeId = progress.lastOpenedLessonId;
+    const target =
+      resumeId && !progress.completedLessonIds.includes(resumeId) ? `/lesson/${resumeId}` : '/dashboard';
+    return <Navigate to={target} replace />;
   }
 
   return (
@@ -488,8 +499,8 @@ export function LandingPage() {
           <h2 id="intro-title">Learn by doing</h2>
           <p>
             Reading the textbook and grinding practice tests only gets you so far. Every concept here is a
-            lesson you work through yourself: you change something and watch what happens, then figure out
-            why. The more you do, the more it sticks.
+            lesson you work through yourself: you predict what a change will do, see it explained and worked
+            through, then solve the rest by hand. The more you do, the more it sticks.
           </p>
         </section>
 
@@ -497,8 +508,18 @@ export function LandingPage() {
           <h2 id="practice-title">Practice that checks your work</h2>
           <p>
             After each lesson, you get a set of problems you solve by hand, right on the screen. An AI grader
-            reads your handwritten work and shows you exactly where your reasoning breaks, with hints whenever
-            you get stuck.
+            reads your handwritten work and points to the specific step where your reasoning breaks, with
+            hints whenever you get stuck.
+          </p>
+        </section>
+
+        <section className="landing-intro" aria-labelledby="science-title">
+          <h2 id="science-title">Backed by learning science</h2>
+          <p>
+            None of this is for show. You guess before the answer appears, study worked examples that fade
+            into your own solving, and practice by recalling and doing rather than rereading, with quick
+            feedback when you slip. Earlier ideas come back in later reviews, and each is a deliberate,
+            evidence-based choice: the effort is what makes learning last.
           </p>
         </section>
 

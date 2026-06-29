@@ -1,0 +1,25 @@
+{
+  "problemId": "flux-point-charge-enclosed",
+  "lessonId": "electric-flux",
+  "unitId": "electrostatics",
+  "skillIds": ["electric-flux"],
+  "principleIds": ["symmetry-gauss"],
+  "misconceptionTags": ["flux-uses-coulomb-constant", "flux-half-surface"],
+  "kind": "single",
+  "difficulty": 5,
+  "difficultyBand": 5,
+  "difficultyFeatures": {
+    "steps": 3,
+    "symbolic": false,
+    "calculus": false,
+    "multiPart": false,
+    "hasTrap": true
+  },
+  "provenance": "authored",
+  "title": "Flux from an enclosed point charge",
+  "prompt": "A +5.0 nC point charge sits inside a closed surface. Find the net electric flux through the surface. Use epsilon_0 = 8.85e-12 C^2/(N m^2).",
+  "givens": [
+    { "label": "enclosed charge q", "value": "+5.0 nC" },
+    { "label": "epsilon_0", "value": "8.85e-12 C^2/(N m^2)" }
+  ]
+}

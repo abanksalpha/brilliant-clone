@@ -35,13 +35,8 @@ export type ProfileIdentity = {
 
 export type ProfilePosition = {
   completedCount: number;
-  completedPsetCount: number;
   currentLessonId: string | null;
 };
-
-function toCount(value: unknown): number {
-  return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? Math.trunc(value) : 0;
-}
 
 /** Lowercases + trims a name for prefix search and the `nameLower` field. */
 export function normalizeNameForSearch(name: string): string {
@@ -56,10 +51,10 @@ function toProfile(id: string, raw: unknown): Profile {
     nameLower: typeof data.nameLower === 'string' ? data.nameLower : '',
     email: typeof data.email === 'string' ? data.email : '',
     photoURL: typeof data.photoURL === 'string' ? data.photoURL : null,
-    completedCount: toCount(data.completedCount),
-    // Optional for back-compat: profiles written before problem-set tracking
-    // simply default to 0 until the owner next syncs.
-    completedPsetCount: toCount(data.completedPsetCount),
+    completedCount:
+      typeof data.completedCount === 'number' && Number.isFinite(data.completedCount) && data.completedCount >= 0
+        ? Math.trunc(data.completedCount)
+        : 0,
     currentLessonId: typeof data.currentLessonId === 'string' ? data.currentLessonId : null,
   };
 }
@@ -88,7 +83,6 @@ export async function upsertProfile(
     email: identity.email.slice(0, MAX_EMAIL),
     photoURL: identity.photoURL,
     completedCount: Math.max(0, Math.trunc(position.completedCount)),
-    completedPsetCount: Math.max(0, Math.trunc(position.completedPsetCount)),
     currentLessonId: position.currentLessonId,
     updatedAt: serverTimestamp(),
   });

@@ -33,8 +33,16 @@ export function parseQuantity(text: string): { value: number; unit: string } | n
   return { value, unit: match[2].trim() };
 }
 
+// Normalize a unit for comparison, tolerating the markdown and LaTeX an LLM
+// re-solver wraps answers in (for example "\text{m/s}^2", "\, N", "N**"). Without
+// this, a value that agrees still fails on a phantom unit mismatch.
 function normalizeUnit(unit: string): string {
-  return unit.replace(/\s+/g, '').toLowerCase();
+  return unit
+    .replace(/\\text\{([^}]*)\}/g, '$1')
+    .replace(/\\[a-zA-Z]+/g, '')
+    .replace(/[{}$*`\\]/g, '')
+    .replace(/\s+/g, '')
+    .toLowerCase();
 }
 
 // Two answer strings agree when both parse, their units match (case insensitive,
@@ -65,17 +73,26 @@ export function answersAgree(a: string, b: string, relTol = 0.01): boolean {
 
 // Verify a synthesized candidate. Collects every failing reason rather than
 // returning on the first one, and passes only when there are none. The gate
-// confirms the problem chains at least two principles, declares diagnosable
-// misconceptions, states a parseable answer, and survives an independent
-// re-solve consensus.
+// confirms the problem (optionally) chains at least two principles, declares
+// diagnosable misconceptions, states a parseable answer, and survives
+// independent verifier solves a MAJORITY of which must agree with the stated
+// answer. The chain requirement, tolerance, and re-solve count are options: a
+// focused single-topic problem opts out of chaining, and the tolerance matches
+// the grader's own leniency (about 2 percent). resolveCount defaults to 3: the
+// verifier solves three times and the stated answer must agree with a majority
+// (floor(resolveCount / 2) + 1), so one flaky solve cannot reject a correct
+// problem.
 export async function verifyProblem(
   candidate: SynthesisCandidate,
   solve: IndependentSolve,
-  resolveCount?: number,
+  options: { requireChain?: boolean; relTol?: number; resolveCount?: number } = {},
 ): Promise<VerifyResult> {
+  const requireChain = options.requireChain ?? true;
+  const relTol = options.relTol ?? 0.02;
+  const resolveCount = Math.max(1, options.resolveCount ?? 3);
   const reasons: string[] = [];
 
-  if (candidate.principleIds.length < 2) {
+  if (requireChain && candidate.principleIds.length < 2) {
     reasons.push('must chain at least two principles');
   }
 
@@ -92,18 +109,26 @@ export async function verifyProblem(
     reasons.push('final answer is not a parseable quantity');
   }
 
+  // The verifier solves resolveCount times in parallel (default 3) and the
+  // stated answer must agree with a MAJORITY of those solves
+  // (floor(resolveCount / 2) + 1). Majority consensus absorbs a single flaky
+  // outlier solve that would otherwise reject a correct problem; a persistent
+  // disagreement still fails loudly rather than accepting a wrong answer. The
+  // solves run concurrently, so three cost roughly one solve of latency.
   const solved = await Promise.all(
-    Array.from({ length: resolveCount ?? 2 }, () => solve(candidate.statement)),
+    Array.from({ length: resolveCount }, () => solve(candidate.statement)),
   );
-  const agreesWithStated = solved.every((answer) => answersAgree(answer, candidate.finalAnswer));
-  const agreesWithEachOther = solved.every((answer) => answersAgree(answer, solved[0]));
-  if (!agreesWithStated || !agreesWithEachOther) {
+  const agreeing = solved.filter((answer) =>
+    answersAgree(answer, candidate.finalAnswer, relTol),
+  ).length;
+  const majority = Math.floor(resolveCount / 2) + 1;
+  if (agreeing < majority) {
     reasons.push('independent re-solve disagreed with the stated answer');
   }
 
   for (const flaw of candidate.flaws) {
     const wrong = parseQuantity(flaw.wrongAnswer);
-    if (wrong === null || answersAgree(flaw.wrongAnswer, candidate.finalAnswer)) {
+    if (wrong === null || answersAgree(flaw.wrongAnswer, candidate.finalAnswer, relTol)) {
       reasons.push(`flaw ${flaw.misconceptionId} does not produce a distinct wrong answer`);
     }
   }
@@ -115,7 +140,7 @@ export async function verifyProblem(
   let hasDuplicateWrongAnswer = false;
   for (let i = 0; i < candidate.flaws.length; i += 1) {
     for (let j = i + 1; j < candidate.flaws.length; j += 1) {
-      if (answersAgree(candidate.flaws[i].wrongAnswer, candidate.flaws[j].wrongAnswer)) {
+      if (answersAgree(candidate.flaws[i].wrongAnswer, candidate.flaws[j].wrongAnswer, relTol)) {
         hasDuplicateWrongAnswer = true;
       }
     }

@@ -1,0 +1,25 @@
+{
+  "problemId": "cl-coulomb-square-corner-net",
+  "lessonId": "coulombs-law",
+  "unitId": "electrostatics",
+  "skillIds": ["coulombs-law"],
+  "principleIds": ["coulomb-force", "superposition"],
+  "misconceptionTags": ["superposition-magnitude-add", "inverse-square-error"],
+  "kind": "single",
+  "difficulty": 5,
+  "difficultyBand": 5,
+  "difficultyFeatures": {
+    "steps": 5,
+    "symbolic": false,
+    "calculus": false,
+    "multiPart": false,
+    "hasTrap": true
+  },
+  "provenance": "authored",
+  "title": "Net force on a corner of a square",
+  "prompt": "Four point charges of +2.0 microcoulomb each sit at the corners of a square 0.10 m on a side. Find the magnitude of the net electric force on one of the corner charges. Use k = 8.99e9 N m^2/C^2.",
+  "givens": [
+    { "label": "charge at each corner", "value": "+2.0 microcoulomb" },
+    { "label": "square side length", "value": "0.10 m" }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "problemId": "cl-coulomb-collinear-net",
+  "lessonId": "coulombs-law",
+  "unitId": "electrostatics",
+  "skillIds": ["coulombs-law"],
+  "principleIds": ["coulomb-force", "superposition"],
+  "misconceptionTags": ["superposition-direction-error", "inverse-square-error"],
+  "kind": "single",
+  "difficulty": 5,
+  "difficultyBand": 5,
+  "difficultyFeatures": {
+    "steps": 5,
+    "symbolic": false,
+    "calculus": false,
+    "multiPart": false,
+    "hasTrap": true
+  },
+  "provenance": "authored",
+  "title": "Net force on a charge in a row",
+  "prompt": "Three charges lie on the x axis: a +6.0 microcoulomb charge at the origin, a +3.0 microcoulomb charge at x = 0.20 m, and a +2.0 microcoulomb charge at x = 0.50 m. Find the magnitude of the net electric force on the +3.0 microcoulomb charge. Use k = 8.99e9 N m^2/C^2.",
+  "givens": [
+    { "label": "q at x = 0", "value": "+6.0 microcoulomb" },
+    { "label": "q at x = 0.20 m", "value": "+3.0 microcoulomb" },
+    { "label": "q at x = 0.50 m", "value": "+2.0 microcoulomb" }
+  ]
+}

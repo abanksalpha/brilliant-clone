@@ -125,16 +125,28 @@ describe('DashboardPage progression', () => {
     expect(lesson1).toBeTruthy();
     expect(within(lesson1!).getByRole('link', { name: 'Start lesson' })).toBeInTheDocument();
 
-    const gaussNode = screen.getByText("Gauss's Law").closest('li');
-    expect(gaussNode?.className).toContain('path-node--locked');
-    expect(within(gaussNode!).queryByRole('link')).toBeNull();
+    const potentialNode = screen.getByText('Electric Potential Energy').closest('li');
+    expect(potentialNode?.className).toContain('path-node--locked');
+    expect(within(potentialNode!).queryByRole('link')).toBeNull();
 
     const capacitorsNode = screen.getByText('Capacitors & Capacitance').closest('li');
     expect(capacitorsNode?.className).toContain('path-node--locked');
     expect(within(capacitorsNode!).queryByRole('link')).toBeNull();
   });
 
-  it('unlocks every live lesson and its problem set in dev mode', () => {
+  it('renders one node per lesson, never a separate problem-set node', () => {
+    renderDashboard();
+
+    const lesson1 = screen.getByText("Coulomb's Law").closest('li')!;
+    // The five-phase loop lives inside the lesson, so there is a single node and
+    // no "Problem Set" sibling.
+    expect(within(lesson1).getAllByRole('link')).toHaveLength(1);
+    expect(screen.queryByText('Problem Set')).toBeNull();
+    expect(screen.queryByText(/Misconception/i)).toBeNull();
+    expect(screen.queryByText(/^Practice$/)).toBeNull();
+  });
+
+  it('marks every live lesson complete in dev mode and keeps faux lessons locked', () => {
     // Dev mode persists via localStorage; stub a working one with it enabled (the
     // URL-parsing path is covered by resolveDevMode's own tests).
     const store = new Map<string, string>([['apt.devMode', '1']]);
@@ -154,16 +166,18 @@ describe('DashboardPage progression', () => {
     try {
       renderDashboard();
 
-      // Charging is normally gated behind finishing Coulomb and its problem set,
-      // but dev mode opens the lesson node...
+      // Dev mode marks every built (live) lesson complete (blue) and clickable, so
+      // the whole real path reads as done and is freely navigable.
       const chargingLi = screen.getByText('Charging, Conductors & Insulators').closest('li');
-      expect(chargingLi?.className).toContain('path-node--active');
       expect(within(chargingLi!).getByRole('link')).toBeInTheDocument();
+      expect(chargingLi?.className).toContain('path-node--complete');
+      expect(chargingLi?.className).not.toContain('path-node--locked');
+      expect(chargingLi?.className).not.toContain('path-node--active');
 
-      // ...and its problem-set node (unique aria-label) becomes clickable too.
-      expect(
-        screen.getByRole('link', { name: 'Problem set for Charging, Conductors & Insulators' }),
-      ).toBeInTheDocument();
+      // Faux/mock lessons (no built content) stay locked even in dev, and inert.
+      const potentialNode = screen.getByText('Electric Potential Energy').closest('li');
+      expect(potentialNode?.className).toContain('path-node--locked');
+      expect(within(potentialNode!).queryByRole('link')).toBeNull();
     } finally {
       vi.unstubAllGlobals();
     }
@@ -198,8 +212,11 @@ describe('DashboardPage progression', () => {
     expect(lesson1).toBeTruthy();
 
     expect(within(lesson1!).getByRole('link', { name: 'Review lesson' })).toBeInTheDocument();
-    expect(screen.getByText(`1/${COURSE_LESSON_TOTAL * 2}`)).toBeInTheDocument();
-    expect(screen.getByText('160')).toBeInTheDocument();
+    expect(screen.getByText(`1/${COURSE_LESSON_TOTAL}`)).toBeInTheDocument();
+    // Total XP is now the single earned-XP counter (questionXp); lesson
+    // completion no longer adds a 120 bonus, so a learner with 40 earned XP and
+    // one finished lesson shows 40, not 160.
+    expect(screen.getByText('40')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'AP Physics C: Electricity and Magnetism' })).toBeInTheDocument();
   });
 
@@ -208,7 +225,7 @@ describe('DashboardPage progression', () => {
 
     renderDashboard();
 
-    expect(screen.getByText(/Loading your progress/i)).toBeInTheDocument();
+    expect(screen.getByText('Loading')).toBeInTheDocument();
     expect(screen.queryByText("Coulomb's Law")).toBeNull();
 
     act(() => {
@@ -224,7 +241,7 @@ describe('DashboardPage progression', () => {
 
     const lessonNode = screen.getByText("Coulomb's Law").closest('li');
     expect(lessonNode?.className).toContain('path-node--complete');
-    expect(screen.queryByText(/Loading your progress/i)).toBeNull();
+    expect(screen.queryByText('Loading')).toBeNull();
   });
 
   it('plays the course intro on arrival but suppresses it when returning from a lesson', () => {

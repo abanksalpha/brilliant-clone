@@ -9,33 +9,31 @@ import { preventClickFocus } from '../shared/preventClickFocus';
 export const VIEW = { h: 220, w: 360 };
 export const CHARGE_R = 18;
 
-export function Figure({ children }: { children: ReactNode }) {
-  return (
-    <div className="cl1-figure">
-      <svg viewBox={`0 0 ${VIEW.w} ${VIEW.h}`} preserveAspectRatio="xMidYMid meet">
-        {children}
-      </svg>
-    </div>
-  );
-}
-
 export function Charge({
   x,
   y,
   sign,
+  count = 1,
   r = CHARGE_R,
   muted = false,
 }: {
   x: number;
   y: number;
   sign: '+' | '-' | 'neutral';
+  count?: number;
   r?: number;
   muted?: boolean;
 }) {
   const tone = sign === '+' ? 'positive' : sign === '-' ? 'negative' : 'neutral';
-  const fontSize = Math.max(14, Math.round(r * 0.9));
-  const label = sign === 'neutral' ? '0' : sign;
-  const dy = sign === '-' ? '0.02em' : '0.03em';
+  const glyphCount = Math.max(1, Math.min(3, Math.round(count)));
+  const label = sign === 'neutral' ? '0' : sign.repeat(glyphCount);
+  // Keep the circle a fixed size; shrink the type a little when several glyphs share it.
+  const fontSize = label.length > 1 ? Math.max(11, Math.round(r * 0.6)) : Math.max(14, Math.round(r * 0.9));
+  // Per-glyph optical centering: dominant-baseline centers the font line box, but
+  // each glyph's ink sits high in this hand font by a different amount, so nudge
+  // each down to its visual center (tuned against rendered pixels). '0' sits the
+  // highest and needs the most.
+  const dy = sign === 'neutral' ? '0.12em' : sign === '+' ? '0.08em' : '0.05em';
   return (
     <g opacity={muted ? 0.45 : 1}>
       <circle className={`charge-circle charge-circle-${tone}`} cx={x} cy={y} r={r} />
@@ -59,20 +57,26 @@ export function Arrow({
   y1,
   y2,
   tone,
+  headScale = 1,
+  dashed = false,
 }: {
   x1: number;
   x2: number;
   y1: number;
   y2: number;
-  tone?: 'net';
+  tone?: 'net' | 'ghost';
+  headScale?: number;
+  // A dashed shaft for a predicted ("ghost") arrow. The geometry, head, and gap
+  // are identical to a solid force arrow; only the stroke differs.
+  dashed?: boolean;
 }) {
   const totalLength = Math.hypot(x2 - x1, y2 - y1);
   if (totalLength < 1) return null;
 
   const angle = Math.atan2(y2 - y1, x2 - x1);
-  const nominalHeadLength = Math.min(12, Math.max(9, totalLength * 0.62));
+  const nominalHeadLength = Math.min(12 * headScale, Math.max(9 * headScale, totalLength * 0.62));
   const headLength = Math.min(nominalHeadLength, Math.max(totalLength - 0.2, 0.2));
-  const headWidth = Math.min(9.2, Math.max(6.8, headLength * 0.95));
+  const headWidth = Math.min(9.2 * headScale, Math.max(6.8 * headScale, headLength * 0.95));
   const shaftInset = Math.min(headLength - 1, Math.max(totalLength - 1, 0));
   const shaftEnd = {
     x: x2 - Math.cos(angle) * shaftInset,
@@ -86,12 +90,14 @@ export function Arrow({
     x: x2 - Math.cos(angle) * headLength - Math.cos(angle + Math.PI / 2) * (headWidth / 2),
     y: y2 - Math.sin(angle) * headLength - Math.sin(angle + Math.PI / 2) * (headWidth / 2),
   };
-  const className = `force-arrow${tone === 'net' ? ' force-arrow-net' : ''}`;
+  const toneClass = tone === 'net' ? ' force-arrow-net' : tone === 'ghost' ? ' force-arrow-ghost' : '';
+  const className = `force-arrow${toneClass}`;
+  const shaftClassName = `${className}${dashed ? ' force-arrow-dashed' : ''}`;
 
   return (
     <g>
       {Math.hypot(shaftEnd.x - x1, shaftEnd.y - y1) > 0.5 ? (
-        <line className={className} x1={x1} x2={shaftEnd.x} y1={y1} y2={shaftEnd.y} />
+        <line className={shaftClassName} x1={x1} x2={shaftEnd.x} y1={y1} y2={shaftEnd.y} />
       ) : null}
       <polygon
         className={`inline-arrow-head ${className}`}
@@ -173,43 +179,6 @@ export function ReadoutRow({ items }: { items: Array<{ label: string; value: str
   );
 }
 
-export function MiniPanel({
-  children,
-  title,
-  onSelect,
-  selected,
-  ariaLabel,
-}: {
-  children: ReactNode;
-  title: string;
-  onSelect?: () => void;
-  selected?: boolean;
-  ariaLabel?: string;
-}) {
-  if (onSelect) {
-    return (
-      <button
-        type="button"
-        className={`cl1-mini-panel cl1-mini-panel--tappable${selected ? ' cl1-mini-panel--selected' : ''}`}
-        aria-label={ariaLabel ?? title}
-        aria-pressed={selected}
-        onMouseDown={preventClickFocus}
-        onClick={onSelect}
-      >
-        <strong>{title}</strong>
-        {children}
-      </button>
-    );
-  }
-
-  return (
-    <div className="cl1-mini-panel">
-      <strong>{title}</strong>
-      {children}
-    </div>
-  );
-}
-
 export function usePointerDrag(
   onMove: (point: { x: number; y: number }) => void,
   getAnchor: () => { x: number; y: number },
@@ -220,6 +189,8 @@ export function usePointerDrag(
     startAnchor: { x: number; y: number };
     startClient: { x: number; y: number };
     startRect: { h: number; w: number };
+    viewW: number;
+    viewH: number;
   } | null>(null);
   const hasMoved = useRef(false);
 
@@ -234,7 +205,9 @@ export function usePointerDrag(
     onPointerDown(event: ReactPointerEvent<SVGGElement>) {
       event.preventDefault();
       event.currentTarget.setPointerCapture?.(event.pointerId);
-      const rect = event.currentTarget.ownerSVGElement?.getBoundingClientRect();
+      const svg = event.currentTarget.ownerSVGElement;
+      const rect = svg?.getBoundingClientRect();
+      const viewBox = svg?.viewBox?.baseVal;
       dragState.current = {
         pointerId: event.pointerId,
         startAnchor: getAnchor(),
@@ -243,6 +216,10 @@ export function usePointerDrag(
           h: rect?.height || VIEW.h,
           w: rect?.width || VIEW.w,
         },
+        // Read the SVG's own viewBox so a drag tracks the cursor 1:1 whatever the
+        // scene's coordinate size is (not the hardcoded VIEW).
+        viewW: viewBox && viewBox.width ? viewBox.width : VIEW.w,
+        viewH: viewBox && viewBox.height ? viewBox.height : VIEW.h,
       };
       hasMoved.current = false;
     },
@@ -255,11 +232,17 @@ export function usePointerDrag(
 
       event.preventDefault();
       hasMoved.current = true;
-      const scaleX = VIEW.w / dragState.current.startRect.w;
-      const scaleY = VIEW.h / dragState.current.startRect.h;
+      // preserveAspectRatio="meet" scales the viewBox uniformly and letterboxes
+      // the wider axis, so use one scale (the larger ratio) for both axes. This
+      // keeps a drag exactly 1:1 with the cursor instead of drifting on the
+      // letterboxed axis.
+      const scale = Math.max(
+        dragState.current.viewW / dragState.current.startRect.w,
+        dragState.current.viewH / dragState.current.startRect.h,
+      );
       onMove({
-        x: dragState.current.startAnchor.x + deltaX * scaleX,
-        y: dragState.current.startAnchor.y + deltaY * scaleY,
+        x: dragState.current.startAnchor.x + deltaX * scale,
+        y: dragState.current.startAnchor.y + deltaY * scale,
       });
     },
     onPointerUp(event: ReactPointerEvent<SVGGElement>) {
@@ -279,6 +262,9 @@ export function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
 }
 
+// Map a value to a pixel length relative to a reference value, so arrows are
+// sized honestly against one another. Brought over from the saga scenes.
 export function scaleByReference(value: number, referenceValue: number, referencePx: number) {
+  if (referenceValue <= 0) return 0;
   return (value / referenceValue) * referencePx;
 }

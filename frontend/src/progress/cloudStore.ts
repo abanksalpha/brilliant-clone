@@ -11,6 +11,11 @@ import {
   normalizeProblemSessions,
   type ProblemSessionState,
 } from './problemSessionProgress';
+import {
+  EMPTY_WORKED_EXAMPLE_SESSION_STATE,
+  normalizeWorkedExampleSessions,
+  type WorkedExampleSessionState,
+} from './workedExampleProgress';
 
 /**
  * The complete cloud-backed state for a single learner. Persisted as one
@@ -22,12 +27,14 @@ export type UserCloudState = {
   progress: DashboardProgress;
   lessonSessions: LessonSessionState;
   problemSessions: ProblemSessionState;
+  workedExampleSessions: WorkedExampleSessionState;
 };
 
 export const EMPTY_CLOUD_STATE: UserCloudState = {
   progress: EMPTY_PROGRESS,
   lessonSessions: EMPTY_SESSION_STATE,
   problemSessions: EMPTY_PROBLEM_SESSION_STATE,
+  workedExampleSessions: EMPTY_WORKED_EXAMPLE_SESSION_STATE,
 };
 
 const USERS_COLLECTION = 'users';
@@ -45,6 +52,7 @@ function toCloudState(raw: unknown): UserCloudState {
     progress: normalizeProgress(data),
     lessonSessions: normalizeLessonSessions(data.lessonSessions),
     problemSessions: normalizeProblemSessions(data.problemSessions),
+    workedExampleSessions: normalizeWorkedExampleSessions(data.workedExampleSessions),
   };
 }
 
@@ -60,8 +68,12 @@ export function toDocument(state: UserCloudState): Record<string, unknown> {
     misconceptions: state.progress.misconceptions,
     problemAttempts: state.progress.problemAttempts,
     misconceptionGraph: state.progress.misconceptionGraph,
+    lessonPhase: state.progress.lessonPhase,
+    generatedSets: state.progress.generatedSets,
+    generatedPlans: state.progress.generatedPlans,
     lessonSessions: state.lessonSessions,
     problemSessions: state.problemSessions,
+    workedExampleSessions: state.workedExampleSessions,
   };
 }
 

@@ -1,0 +1,19 @@
+{
+  "problemId": "gauss-infinite-sheet",
+  "lessonId": "gausss-law",
+  "unitId": "electrostatics",
+  "skillIds": ["gausss-law"],
+  "principleIds": ["symmetry-gauss", "field-concept"],
+  "misconceptionTags": ["sheet-uses-conductor-formula", "sheet-uses-coulomb"],
+  "kind": "single",
+  "difficulty": 4,
+  "difficultyBand": 4,
+  "difficultyFeatures": { "steps": 4, "symbolic": false, "calculus": false, "multiPart": false, "hasTrap": true },
+  "provenance": "authored",
+  "title": "Field of a charged sheet",
+  "prompt": "A large flat sheet carries a uniform surface charge density of 4.0e-8 C/m^2. Find the magnitude of the electric field near the sheet. Use epsilon_0 = 8.85e-12 C^2/(N m^2).",
+  "givens": [
+    { "label": "surface charge density sigma", "value": "4.0e-8 C/m^2" },
+    { "label": "epsilon_0", "value": "8.85e-12 C^2/(N m^2)" }
+  ]
+}

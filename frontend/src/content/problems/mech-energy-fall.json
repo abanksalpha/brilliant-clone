@@ -1,0 +1,25 @@
+{
+  "problemId": "mech-energy-fall",
+  "lessonId": "mechanics-energy",
+  "unitId": "mechanics",
+  "skillIds": ["mechanics-energy"],
+  "principleIds": ["mechanics-energy"],
+  "misconceptionTags": ["energy-omits-sqrt", "energy-factor-error"],
+  "kind": "single",
+  "difficulty": 4,
+  "difficultyBand": 4,
+  "difficultyFeatures": {
+    "steps": 3,
+    "symbolic": false,
+    "calculus": false,
+    "multiPart": false,
+    "hasTrap": true
+  },
+  "provenance": "authored",
+  "title": "Speed from energy conservation",
+  "prompt": "A 0.50 kg ball is released from rest at a height of 1.2 m above the ground. Ignoring air resistance, find its speed just before it reaches the ground. Use g = 9.8 m/s^2.",
+  "givens": [
+    { "label": "m", "value": "0.50 kg" },
+    { "label": "h", "value": "1.2 m" }
+  ]
+}

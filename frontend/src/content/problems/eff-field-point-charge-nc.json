@@ -1,0 +1,25 @@
+{
+  "problemId": "eff-field-point-charge-nc",
+  "lessonId": "electric-field-field-lines",
+  "unitId": "electrostatics",
+  "skillIds": ["electric-field-field-lines"],
+  "principleIds": ["field-concept"],
+  "misconceptionTags": ["inverse-square-error"],
+  "kind": "single",
+  "difficulty": 4,
+  "difficultyBand": 4,
+  "difficultyFeatures": {
+    "steps": 4,
+    "symbolic": false,
+    "calculus": false,
+    "multiPart": false,
+    "hasTrap": true
+  },
+  "provenance": "authored",
+  "title": "Field from a point charge in nanocoulombs",
+  "prompt": "A +30 nanocoulomb point charge sits alone in space. Find the magnitude of the electric field it produces at a point 5.0 cm away. Use k = 8.99e9 N m^2/C^2.",
+  "givens": [
+    { "label": "Q", "value": "+30 nanocoulomb" },
+    { "label": "r", "value": "5.0 cm" }
+  ]
+}

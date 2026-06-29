@@ -1,0 +1,21 @@
+{
+  "problemId": "cl-coulomb-equilibrium",
+  "lessonId": "coulombs-law",
+  "unitId": "electrostatics",
+  "skillIds": ["coulombs-law"],
+  "principleIds": ["coulomb-force", "superposition"],
+  "misconceptionTags": ["equilibrium-sqrt-omitted", "equilibrium-reference-error"],
+  "kind": "single",
+  "difficulty": 5,
+  "difficultyBand": 5,
+  "difficultyFeatures": {
+    "steps": 5,
+    "symbolic": true,
+    "calculus": false,
+    "multiPart": false,
+    "hasTrap": true
+  },
+  "provenance": "authored",
+  "title": "Equilibrium point between two charges",
+  "prompt": "A +q charge and a +4q charge are fixed 0.30 m apart. A third charge is placed on the line between them so that the net electric force on it is zero. Find its distance from the +q charge."
+}

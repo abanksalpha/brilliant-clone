@@ -61,12 +61,7 @@ vi.mock('../social/SocialContext', () => ({
   SocialProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
-function makeFriend(
-  uid: string,
-  displayName: string,
-  completedCount: number,
-  completedPsetCount = 0,
-): FriendView {
+function makeFriend(uid: string, displayName: string, completedCount: number): FriendView {
   const profile: Profile = {
     uid,
     displayName,
@@ -74,7 +69,6 @@ function makeFriend(
     email: '',
     photoURL: null,
     completedCount,
-    completedPsetCount,
     currentLessonId: null,
   };
   return { uid, profile };
@@ -95,31 +89,21 @@ describe('Dashboard friend overlay', () => {
     social.friends = [];
   });
 
-  it('places a friend who finished a lesson but not its problem set on that problem-set node', () => {
-    social.friends = [makeFriend('ada', 'Ada Lovelace', 0, 0), makeFriend('carl', 'Carl Gauss', 1, 0)];
+  it("places each friend's avatar on the lesson they are currently on", () => {
+    social.friends = [makeFriend('ada', 'Ada Lovelace', 0), makeFriend('carl', 'Carl Gauss', 1)];
 
     renderDashboard();
 
     // A friend who has finished nothing sits on the first lesson.
-    const adaLi = screen.getByRole('img', { name: 'Ada Lovelace' }).closest('li')!;
-    expect(within(adaLi).getByText("Coulomb's Law")).toBeInTheDocument();
+    const adaAvatar = screen.getByRole('img', { name: 'Ada Lovelace' });
+    expect(within(adaAvatar.closest('li')!).getByText("Coulomb's Law")).toBeInTheDocument();
 
-    // A friend who finished Coulomb's lesson but not its problem set sits on the
-    // Coulomb problem-set node, not advanced to the next lesson.
-    const carlLi = screen.getByRole('img', { name: 'Carl Gauss' }).closest('li')!;
-    expect(within(carlLi).getByText('Problem Set')).toBeInTheDocument();
-    expect(carlLi.querySelector('[aria-label*="Coulomb"]')).not.toBeNull();
-    expect(within(carlLi).queryByText('Charging, Conductors & Insulators')).toBeNull();
-  });
-
-  it('advances a friend to the next lesson once their problem set is done', () => {
-    social.friends = [makeFriend('dana', 'Dana Scully', 1, 1)];
-
-    renderDashboard();
-
-    const danaLi = screen.getByRole('img', { name: 'Dana Scully' }).closest('li')!;
-    expect(within(danaLi).getByText('Charging, Conductors & Insulators')).toBeInTheDocument();
-    expect(within(danaLi).queryByText('Problem Set')).toBeNull();
+    // A friend who finished one lesson sits on the lesson they are now on (the
+    // next one), not back on the prior lesson or its problem set.
+    const carlAvatar = screen.getByRole('img', { name: 'Carl Gauss' });
+    const carlLi = carlAvatar.closest('li')!;
+    expect(within(carlLi).getByText('Charging, Conductors & Insulators')).toBeInTheDocument();
+    expect(within(carlLi).queryByText('Problem Set')).toBeNull();
   });
 
   it('renders no friend avatars when you have no friends', () => {

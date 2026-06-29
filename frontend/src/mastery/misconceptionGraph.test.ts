@@ -7,9 +7,10 @@ import {
   knownSignatures,
   localDayStamp,
   nodeIdFor,
+  selectNodesForScope,
   trackedNodes,
 } from './misconceptionGraph';
-import type { ConceptMatch, MisconceptionNode } from './misconceptionGraph';
+import type { ConceptMatch, MisconceptionGraph, MisconceptionNode } from './misconceptionGraph';
 
 const now = new Date('2026-01-01T00:00:00.000Z');
 
@@ -274,5 +275,107 @@ describe('trackedNodes', () => {
     expect(tracked).toHaveLength(1);
     expect(tracked[0].id).toBe(nodeIdFor('P2', 'W2'));
     expect(tracked[0].status).toBe('tracked');
+  });
+});
+
+describe('selectNodesForScope', () => {
+  // A tracked node with lastSeenISO at `now`, so its decayed strength equals its
+  // stored strength and the ordering tests stay deterministic and easy to read.
+  function trackedNode(overrides: Partial<MisconceptionNode>): MisconceptionNode {
+    return {
+      id: 'mc:x',
+      status: 'tracked',
+      principleId: 'coulomb-force',
+      wrongBelief: 'W',
+      specificNote: 'n',
+      caught: 1,
+      missed: 1,
+      strength: 0.5,
+      lastSeenISO: now.toISOString(),
+      caughtDayStamps: ['2026-01-01'],
+      createdISO: '2025-12-31T00:00:00.000Z',
+      ...overrides,
+    };
+  }
+
+  function graphOf(...nodes: MisconceptionNode[]): MisconceptionGraph {
+    return Object.fromEntries(nodes.map((node) => [node.id, node]));
+  }
+
+  it('keeps only tracked nodes whose principleId is in scope', () => {
+    const inScope = trackedNode({ id: 'mc:a', principleId: 'coulomb-force' });
+    const offScope = trackedNode({ id: 'mc:b', principleId: 'field-concept' });
+    const noteInScope = trackedNode({ id: 'mc:c', principleId: 'coulomb-force', status: 'note' });
+    const graph = graphOf(inScope, offScope, noteInScope);
+
+    const result = selectNodesForScope(graph, ['coulomb-force'], 10, now);
+    expect(result.map((node) => node.id)).toEqual(['mc:a']);
+  });
+
+  it('orders the weakest decayed strength first', () => {
+    const graph = graphOf(
+      trackedNode({ id: 'mc:strong', strength: 0.9 }),
+      trackedNode({ id: 'mc:weak', strength: 0.1 }),
+      trackedNode({ id: 'mc:mid', strength: 0.5 }),
+    );
+
+    const result = selectNodesForScope(graph, ['coulomb-force'], 10, now);
+    expect(result.map((node) => node.id)).toEqual(['mc:weak', 'mc:mid', 'mc:strong']);
+  });
+
+  it('compares decayed strength at now, not the stored value', () => {
+    // A stale but high stored strength decays below a fresh, lower one.
+    const staleStrong = trackedNode({
+      id: 'mc:stale',
+      strength: 0.95,
+      caught: 0, // half life is the base 3 days, so a month of decay is severe
+      lastSeenISO: new Date('2025-12-01T00:00:00.000Z').toISOString(),
+    });
+    const freshWeak = trackedNode({ id: 'mc:fresh', strength: 0.4 });
+    const graph = graphOf(staleStrong, freshWeak);
+
+    const result = selectNodesForScope(graph, ['coulomb-force'], 10, now);
+    expect(result.map((node) => node.id)).toEqual(['mc:stale', 'mc:fresh']);
+  });
+
+  it('breaks strength ties by earlier createdISO first', () => {
+    const later = trackedNode({
+      id: 'mc:later',
+      strength: 0.5,
+      createdISO: '2025-12-31T00:00:00.000Z',
+    });
+    const earlier = trackedNode({
+      id: 'mc:earlier',
+      strength: 0.5,
+      createdISO: '2025-12-30T00:00:00.000Z',
+    });
+    const graph = graphOf(later, earlier);
+
+    const result = selectNodesForScope(graph, ['coulomb-force'], 10, now);
+    expect(result.map((node) => node.id)).toEqual(['mc:earlier', 'mc:later']);
+  });
+
+  it('returns at most count nodes, keeping the weakest', () => {
+    const graph = graphOf(
+      trackedNode({ id: 'mc:1', strength: 0.1 }),
+      trackedNode({ id: 'mc:2', strength: 0.2 }),
+      trackedNode({ id: 'mc:3', strength: 0.3 }),
+      trackedNode({ id: 'mc:4', strength: 0.4 }),
+    );
+
+    const result = selectNodesForScope(graph, ['coulomb-force'], 2, now);
+    expect(result.map((node) => node.id)).toEqual(['mc:1', 'mc:2']);
+  });
+
+  it('returns an empty list when count is zero or negative', () => {
+    const graph = graphOf(trackedNode({ id: 'mc:1' }));
+    expect(selectNodesForScope(graph, ['coulomb-force'], 0, now)).toEqual([]);
+    expect(selectNodesForScope(graph, ['coulomb-force'], -3, now)).toEqual([]);
+  });
+
+  it('returns an empty list for an empty graph or an out-of-scope request', () => {
+    expect(selectNodesForScope(emptyGraph(), ['coulomb-force'], 3, now)).toEqual([]);
+    const graph = graphOf(trackedNode({ id: 'mc:1', principleId: 'coulomb-force' }));
+    expect(selectNodesForScope(graph, ['field-concept'], 3, now)).toEqual([]);
   });
 });

@@ -1,0 +1,26 @@
+{
+  "problemId": "flux-solve-angle",
+  "lessonId": "electric-flux",
+  "unitId": "electrostatics",
+  "skillIds": ["electric-flux"],
+  "principleIds": ["field-concept"],
+  "misconceptionTags": ["flux-ignores-angle", "flux-uses-sin"],
+  "kind": "single",
+  "difficulty": 4,
+  "difficultyBand": 4,
+  "difficultyFeatures": {
+    "steps": 4,
+    "symbolic": false,
+    "calculus": false,
+    "multiPart": false,
+    "hasTrap": true
+  },
+  "provenance": "authored",
+  "title": "Find the tilt from the flux",
+  "prompt": "A flat square surface with sides of 0.20 m sits in a uniform electric field of 300 N/C. The electric flux through it is 6.0 N m^2/C. Find the angle between the field and the surface normal.",
+  "givens": [
+    { "label": "field E", "value": "300 N/C" },
+    { "label": "square side", "value": "0.20 m" },
+    { "label": "flux through the surface", "value": "6.0 N m^2/C" }
+  ]
+}

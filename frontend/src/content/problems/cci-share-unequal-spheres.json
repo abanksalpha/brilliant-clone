@@ -1,0 +1,21 @@
+{
+  "problemId": "cci-share-unequal-spheres",
+  "lessonId": "charging-conductors-insulators",
+  "unitId": "electrostatics",
+  "skillIds": ["charging-conductors-insulators"],
+  "principleIds": ["conductor-equilibrium"],
+  "misconceptionTags": ["charge-sharing-equal-split"],
+  "kind": "single",
+  "difficulty": 4,
+  "difficultyBand": 4,
+  "difficultyFeatures": {
+    "steps": 4,
+    "symbolic": true,
+    "calculus": false,
+    "multiPart": false,
+    "hasTrap": true
+  },
+  "provenance": "authored",
+  "title": "Sharing charge between unequal spheres",
+  "prompt": "Two isolated metal spheres, one of radius R and the other of radius 2R, are far apart and then joined by a thin conducting wire. The total charge shared between them is +9.0 nC. After the charge settles, find the charge on the larger sphere."
+}

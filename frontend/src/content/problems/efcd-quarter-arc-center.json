@@ -1,0 +1,26 @@
+{
+  "problemId": "efcd-quarter-arc-center",
+  "lessonId": "electric-fields-of-charge-distributions",
+  "unitId": "electrostatics",
+  "skillIds": ["electric-fields-of-charge-distributions"],
+  "principleIds": ["field-concept", "superposition"],
+  "misconceptionTags": ["distribution-as-point", "quarter-arc-omits-component"],
+  "kind": "single",
+  "difficulty": 5,
+  "difficultyBand": 5,
+  "difficultyFeatures": {
+    "steps": 5,
+    "symbolic": false,
+    "calculus": true,
+    "multiPart": true,
+    "hasTrap": true
+  },
+  "provenance": "authored",
+  "title": "Field at the center of a quarter arc",
+  "prompt": "A quarter-circle arc of radius 0.040 m carries a uniformly distributed charge of +4.0 nC. Find the magnitude of the electric field at the center of the arc. Use k = 8.99e9 N m^2/C^2.",
+  "givens": [
+    { "label": "arc charge Q", "value": "+4.0 nC" },
+    { "label": "arc radius R", "value": "0.040 m" },
+    { "label": "shape", "value": "a quarter circle" }
+  ]
+}

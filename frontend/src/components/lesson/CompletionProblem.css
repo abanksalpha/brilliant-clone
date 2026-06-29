@@ -1,0 +1,41 @@
+/* CompletionProblem: the 'completion' and 'skeleton' rungs of Phase 4. The
+   student finishes a partially worked problem on the embedded ProblemPlayer. The
+   seeded "worked so far" steps ride inside the problem drawer (below the
+   statement) so the whiteboard fills the screen to the top like Review and Solve.
+   Everything is scoped under .completion-problem / .completion-prefilled so it
+   never leaks onto sibling phases; spacing rides the 4px grid. */
+
+.completion-problem {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Sits in the drawer beneath the problem statement, separated by a dashed rule so
+   the already-worked steps read as reference, distinct from the prompt. */
+.completion-prefilled {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  margin-top: var(--s-4);
+  padding-top: var(--s-4);
+  border-top: 2px dashed var(--sketch-ink);
+}
+
+.completion-prefilled .eyebrow {
+  margin: 0;
+}
+
+.completion-prefilled-steps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  margin: 0;
+  padding-left: var(--s-5);
+  line-height: 1.5;
+}
+
+.completion-prefilled-steps li {
+  padding-left: var(--s-1);
+}

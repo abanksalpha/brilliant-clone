@@ -1,0 +1,25 @@
+{
+  "problemId": "cci-field-outside-sphere",
+  "lessonId": "charging-conductors-insulators",
+  "unitId": "electrostatics",
+  "skillIds": ["charging-conductors-insulators"],
+  "principleIds": ["conductor-equilibrium", "field-concept"],
+  "misconceptionTags": ["inverse-square-error", "radius-diameter-confusion"],
+  "kind": "single",
+  "difficulty": 4,
+  "difficultyBand": 4,
+  "difficultyFeatures": {
+    "steps": 4,
+    "symbolic": false,
+    "calculus": false,
+    "multiPart": false,
+    "hasTrap": true
+  },
+  "provenance": "authored",
+  "title": "Field just outside a charged sphere",
+  "prompt": "A solid metal sphere of radius 0.050 m carries a charge of +8.0 nC. Find the magnitude of the electric field just outside the sphere's surface. Use k = 8.99e9 N m^2/C^2.",
+  "givens": [
+    { "label": "radius R", "value": "0.050 m" },
+    { "label": "charge Q", "value": "+8.0 nC" }
+  ]
+}
